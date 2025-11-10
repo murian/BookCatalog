@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:hive/hive.dart';
 import '../../providers/books_provider.dart';
 import 'book_form_screen.dart';
 
@@ -16,8 +17,119 @@ class _AIBookScannerScreenState extends State<AIBookScannerScreen> {
   final ImagePicker _picker = ImagePicker();
   bool _isProcessing = false;
 
+  Future<bool> _ensureGeminiInitialized() async {
+    final booksProvider = Provider.of<BooksProvider>(context, listen: false);
+
+    // Check if already initialized
+    if (booksProvider.isGeminiInitialized) {
+      return true;
+    }
+
+    // Check if API key is saved in Hive
+    final prefsBox = await Hive.openBox('preferences');
+    final savedApiKey = prefsBox.get('gemini_api_key');
+
+    if (savedApiKey != null && savedApiKey.isNotEmpty) {
+      booksProvider.initializeGemini(savedApiKey);
+      return true;
+    }
+
+    // Prompt user for API key
+    return await _showApiKeyDialog();
+  }
+
+  Future<bool> _showApiKeyDialog() async {
+    final TextEditingController apiKeyController = TextEditingController();
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Gemini API Key Required'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'To use AI book identification, you need a Google Gemini API key.',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: apiKeyController,
+              decoration: const InputDecoration(
+                labelText: 'API Key',
+                hintText: 'AIza...',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 1,
+            ),
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: () {
+                // User can implement URL launch here if needed
+              },
+              child: const Text(
+                'Get your free API key at:\nmakersuite.google.com/app/apikey',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.blue,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final apiKey = apiKeyController.text.trim();
+              if (apiKey.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter an API key')),
+                );
+                return;
+              }
+
+              // Save API key to Hive
+              final prefsBox = await Hive.openBox('preferences');
+              await prefsBox.put('gemini_api_key', apiKey);
+
+              // Initialize Gemini
+              final booksProvider = Provider.of<BooksProvider>(context, listen: false);
+              booksProvider.initializeGemini(apiKey);
+
+              Navigator.of(context).pop(true);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    return result ?? false;
+  }
+
   Future<void> _pickImage(ImageSource source, bool isCover) async {
     try {
+      // Check if Gemini is initialized, prompt for API key if not
+      final isInitialized = await _ensureGeminiInitialized();
+      if (!isInitialized) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Gemini API key is required for AI book identification'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
       final XFile? image = await _picker.pickImage(
         source: source,
         maxWidth: 1920,

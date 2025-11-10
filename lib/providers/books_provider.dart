@@ -25,6 +25,7 @@ class BooksProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
   String get searchQuery => _searchQuery;
   ReadingStatus? get statusFilter => _statusFilter;
+  bool get isGeminiInitialized => _geminiService.isInitialized;
 
   // Initialize Gemini service
   void initializeGemini(String apiKey) {
