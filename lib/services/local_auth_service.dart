@@ -77,7 +77,7 @@ class LocalAuthService {
         orElse: () => throw 'Invalid email or password.',
       );
 
-      final userData = userEntry.value as Map;
+      final userData = Map<String, dynamic>.from(userEntry.value as Map);
       final userModel = UserModel.fromMap(userData);
 
       // Set as current user
@@ -114,7 +114,7 @@ class LocalAuthService {
 
       if (userData == null) return null;
 
-      return UserModel.fromMap(userData);
+      return UserModel.fromMap(Map<String, dynamic>.from(userData as Map));
     } catch (e) {
       return null;
     }
@@ -155,7 +155,7 @@ class LocalAuthService {
 
       if (userData == null) return null;
 
-      return UserModel.fromMap(userData);
+      return UserModel.fromMap(Map<String, dynamic>.from(userData as Map));
     } catch (e) {
       throw 'Failed to get user profile.';
     }
@@ -175,7 +175,7 @@ class LocalAuthService {
         throw 'User not found.';
       }
 
-      final updatedData = Map<String, dynamic>.from(userData);
+      final updatedData = Map<String, dynamic>.from(userData as Map);
       if (displayName != null) updatedData['displayName'] = displayName;
       if (photoUrl != null) updatedData['photoUrl'] = photoUrl;
 
