@@ -1,10 +1,9 @@
 import 'package:flutter/foundation.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
-import '../services/auth_service.dart';
+import '../services/local_auth_service.dart';
 
 class AuthProvider with ChangeNotifier {
-  final AuthService _authService = AuthService();
+  final LocalAuthService _authService = LocalAuthService();
   UserModel? _user;
   bool _isLoading = false;
   String? _errorMessage;
@@ -15,20 +14,13 @@ class AuthProvider with ChangeNotifier {
   bool get isAuthenticated => _user != null;
 
   AuthProvider() {
-    _initAuthListener();
+    _checkCurrentUser();
   }
 
-  // Listen to auth state changes
-  void _initAuthListener() {
-    _authService.authStateChanges.listen((User? firebaseUser) async {
-      if (firebaseUser != null) {
-        final userProfile = await _authService.getUserProfile(firebaseUser.uid);
-        _user = userProfile;
-      } else {
-        _user = null;
-      }
-      notifyListeners();
-    });
+  // Check if user is already signed in
+  Future<void> _checkCurrentUser() async {
+    _user = await _authService.getCurrentUser();
+    notifyListeners();
   }
 
   // Sign up with email and password

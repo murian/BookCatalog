@@ -1,31 +1,70 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hive/hive.dart';
 import 'reading_status.dart';
 
-class Book {
-  final String? id;
-  final String userId;
-  final String title;
-  final String? author;
-  final String? isbn;
-  final String? publisher;
-  final String? publishedDate;
-  final String? description;
-  final String? coverImageUrl;
-  final int? pageCount;
-  final List<String>? categories;
-  final String? language;
+part 'book.g.dart';
+
+@HiveType(typeId: 0)
+class Book extends HiveObject {
+  @HiveField(0)
+  String id;
+
+  @HiveField(1)
+  String userId;
+
+  @HiveField(2)
+  String title;
+
+  @HiveField(3)
+  String? author;
+
+  @HiveField(4)
+  String? isbn;
+
+  @HiveField(5)
+  String? publisher;
+
+  @HiveField(6)
+  String? publishedDate;
+
+  @HiveField(7)
+  String? description;
+
+  @HiveField(8)
+  String? coverImageUrl;
+
+  @HiveField(9)
+  int? pageCount;
+
+  @HiveField(10)
+  List<String>? categories;
+
+  @HiveField(11)
+  String? language;
 
   // Custom fields
-  final DateTime? purchaseDate;
-  final bool purchaseDateUnknown;
-  final DateTime? startReadingDate;
-  final DateTime? finishReadingDate;
-  final ReadingStatus status;
-  final DateTime dateAdded;
-  final DateTime? dateModified;
+  @HiveField(12)
+  DateTime? purchaseDate;
+
+  @HiveField(13)
+  bool purchaseDateUnknown;
+
+  @HiveField(14)
+  DateTime? startReadingDate;
+
+  @HiveField(15)
+  DateTime? finishReadingDate;
+
+  @HiveField(16)
+  int statusIndex; // Store enum as int
+
+  @HiveField(17)
+  DateTime dateAdded;
+
+  @HiveField(18)
+  DateTime? dateModified;
 
   Book({
-    this.id,
+    String? id,
     required this.userId,
     required this.title,
     this.author,
@@ -41,14 +80,25 @@ class Book {
     this.purchaseDateUnknown = false,
     this.startReadingDate,
     this.finishReadingDate,
-    this.status = ReadingStatus.toRead,
+    ReadingStatus status = ReadingStatus.toRead,
     DateTime? dateAdded,
     this.dateModified,
-  }) : dateAdded = dateAdded ?? DateTime.now();
+  })  : id = id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        dateAdded = dateAdded ?? DateTime.now(),
+        statusIndex = status.index;
 
-  // Convert to Firestore document
+  // Getter for status
+  ReadingStatus get status => ReadingStatus.values[statusIndex];
+
+  // Setter for status
+  set status(ReadingStatus value) {
+    statusIndex = value.index;
+  }
+
+  // Convert to Map for export
   Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'userId': userId,
       'title': title,
       'author': author,
@@ -60,20 +110,20 @@ class Book {
       'pageCount': pageCount,
       'categories': categories,
       'language': language,
-      'purchaseDate': purchaseDate != null ? Timestamp.fromDate(purchaseDate!) : null,
+      'purchaseDate': purchaseDate?.toIso8601String(),
       'purchaseDateUnknown': purchaseDateUnknown,
-      'startReadingDate': startReadingDate != null ? Timestamp.fromDate(startReadingDate!) : null,
-      'finishReadingDate': finishReadingDate != null ? Timestamp.fromDate(finishReadingDate!) : null,
+      'startReadingDate': startReadingDate?.toIso8601String(),
+      'finishReadingDate': finishReadingDate?.toIso8601String(),
       'status': status.name,
-      'dateAdded': Timestamp.fromDate(dateAdded),
-      'dateModified': dateModified != null ? Timestamp.fromDate(dateModified!) : null,
+      'dateAdded': dateAdded.toIso8601String(),
+      'dateModified': dateModified?.toIso8601String(),
     };
   }
 
-  // Create from Firestore document
-  factory Book.fromMap(Map<String, dynamic> map, String documentId) {
+  // Create from Map
+  factory Book.fromMap(Map<String, dynamic> map) {
     return Book(
-      id: documentId,
+      id: map['id'],
       userId: map['userId'] ?? '',
       title: map['title'] ?? '',
       author: map['author'],
@@ -85,13 +135,13 @@ class Book {
       pageCount: map['pageCount'],
       categories: map['categories'] != null ? List<String>.from(map['categories']) : null,
       language: map['language'],
-      purchaseDate: map['purchaseDate'] != null ? (map['purchaseDate'] as Timestamp).toDate() : null,
+      purchaseDate: map['purchaseDate'] != null ? DateTime.parse(map['purchaseDate']) : null,
       purchaseDateUnknown: map['purchaseDateUnknown'] ?? false,
-      startReadingDate: map['startReadingDate'] != null ? (map['startReadingDate'] as Timestamp).toDate() : null,
-      finishReadingDate: map['finishReadingDate'] != null ? (map['finishReadingDate'] as Timestamp).toDate() : null,
-      status: ReadingStatus.fromString(map['status'] ?? 'toRead'),
-      dateAdded: map['dateAdded'] != null ? (map['dateAdded'] as Timestamp).toDate() : DateTime.now(),
-      dateModified: map['dateModified'] != null ? (map['dateModified'] as Timestamp).toDate() : null,
+      startReadingDate: map['startReadingDate'] != null ? DateTime.parse(map['startReadingDate']) : null,
+      finishReadingDate: map['finishReadingDate'] != null ? DateTime.parse(map['finishReadingDate']) : null,
+      status: map['status'] != null ? ReadingStatus.fromString(map['status']) : ReadingStatus.toRead,
+      dateAdded: map['dateAdded'] != null ? DateTime.parse(map['dateAdded']) : DateTime.now(),
+      dateModified: map['dateModified'] != null ? DateTime.parse(map['dateModified']) : null,
     );
   }
 

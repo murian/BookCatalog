@@ -30,8 +30,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     final booksProvider = Provider.of<BooksProvider>(context, listen: false);
 
     if (authProvider.user != null) {
-      final stats =
-          await booksProvider.getStatistics(authProvider.user!.uid);
+      final stats = booksProvider.getStatistics(authProvider.user!.uid);
       setState(() {
         _statistics = stats;
         _isLoading = false;

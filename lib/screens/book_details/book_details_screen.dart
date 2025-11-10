@@ -309,7 +309,7 @@ class BookDetailsScreen extends StatelessWidget {
 
     if (confirmed == true && context.mounted) {
       final booksProvider = Provider.of<BooksProvider>(context, listen: false);
-      final success = await booksProvider.deleteBook(book.id!);
+      final success = await booksProvider.deleteBook(book.id!, book.userId);
 
       if (context.mounted) {
         if (success) {

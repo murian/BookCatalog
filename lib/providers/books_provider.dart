@@ -2,13 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'dart:typed_data';
 import '../models/book.dart';
 import '../models/reading_status.dart';
-import '../services/firestore_service.dart';
+import '../services/local_database_service.dart';
 import '../services/gemini_service.dart';
 import '../services/google_books_service.dart';
 import '../services/open_library_service.dart';
 
 class BooksProvider with ChangeNotifier {
-  final FirestoreService _firestoreService = FirestoreService();
+  final LocalDatabaseService _databaseService = LocalDatabaseService();
   final GeminiService _geminiService = GeminiService();
   final GoogleBooksService _googleBooksService = GoogleBooksService();
   final OpenLibraryService _openLibraryService = OpenLibraryService();
@@ -31,13 +31,16 @@ class BooksProvider with ChangeNotifier {
     _geminiService.initialize(apiKey);
   }
 
-  // Load books stream
+  // Load books (no longer streaming, just load once)
   void loadBooks(String userId) {
-    _firestoreService.getUserBooks(userId).listen((books) {
-      _books = books;
+    try {
+      _books = _databaseService.getUserBooks(userId);
       _applyFilters();
       notifyListeners();
-    });
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+    }
   }
 
   // Add a new book
@@ -49,7 +52,7 @@ class BooksProvider with ChangeNotifier {
 
       // Check if ISBN already exists
       if (book.isbn != null && book.isbn!.isNotEmpty) {
-        final exists = await _firestoreService.isbnExists(book.userId, book.isbn!);
+        final exists = _databaseService.isbnExists(book.userId, book.isbn!);
         if (exists) {
           _errorMessage = 'A book with this ISBN already exists in your catalog.';
           _isLoading = false;
@@ -58,7 +61,10 @@ class BooksProvider with ChangeNotifier {
         }
       }
 
-      await _firestoreService.addBook(book);
+      await _databaseService.addBook(book);
+
+      // Reload books after adding
+      loadBooks(book.userId);
 
       _isLoading = false;
       notifyListeners();
@@ -79,7 +85,10 @@ class BooksProvider with ChangeNotifier {
       _errorMessage = null;
       notifyListeners();
 
-      await _firestoreService.updateBook(book);
+      await _databaseService.updateBook(book);
+
+      // Reload books after updating
+      loadBooks(book.userId);
 
       _isLoading = false;
       notifyListeners();
@@ -94,13 +103,16 @@ class BooksProvider with ChangeNotifier {
   }
 
   // Delete book
-  Future<bool> deleteBook(String bookId) async {
+  Future<bool> deleteBook(String bookId, String userId) async {
     try {
       _isLoading = true;
       _errorMessage = null;
       notifyListeners();
 
-      await _firestoreService.deleteBook(bookId);
+      await _databaseService.deleteBook(bookId);
+
+      // Reload books after deleting
+      loadBooks(userId);
 
       _isLoading = false;
       notifyListeners();
@@ -216,9 +228,9 @@ class BooksProvider with ChangeNotifier {
   }
 
   // Get reading statistics
-  Future<Map<String, dynamic>?> getStatistics(String userId) async {
+  Map<String, dynamic>? getStatistics(String userId) {
     try {
-      return await _firestoreService.getReadingStatistics(userId);
+      return _databaseService.getReadingStatistics(userId);
     } catch (e) {
       _errorMessage = 'Failed to get statistics: $e';
       notifyListeners();

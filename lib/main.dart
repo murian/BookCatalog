@@ -1,17 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:path_provider/path_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/books_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'core/theme/app_theme.dart';
+import 'models/book.dart';
+import 'services/local_database_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
-  await Firebase.initializeApp();
+  // Initialize Hive
+  await Hive.initFlutter();
+
+  // Register Hive adapters
+  Hive.registerAdapter(BookAdapter());
+
+  // Initialize database
+  final databaseService = LocalDatabaseService();
+  await databaseService.initialize();
 
   runApp(const MyApp());
 }
