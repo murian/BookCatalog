@@ -4,17 +4,26 @@ import '../models/reading_status.dart';
 
 class LocalDatabaseService {
   static const String _booksBoxName = 'books';
-  late Box<Book> _booksBox;
+  Box<Book>? _booksBox;
 
   // Initialize database
   Future<void> initialize() async {
     _booksBox = await Hive.openBox<Book>(_booksBoxName);
   }
 
+  // Ensure box is opened
+  Future<Box<Book>> _ensureBoxOpened() async {
+    if (_booksBox == null || !_booksBox!.isOpen) {
+      _booksBox = await Hive.openBox<Book>(_booksBoxName);
+    }
+    return _booksBox!;
+  }
+
   // Add a new book
   Future<String> addBook(Book book) async {
     try {
-      await _booksBox.put(book.id, book);
+      final box = await _ensureBoxOpened();
+      await box.put(book.id, book);
       return book.id;
     } catch (e) {
       throw 'Failed to add book: $e';
@@ -24,8 +33,9 @@ class LocalDatabaseService {
   // Update an existing book
   Future<void> updateBook(Book book) async {
     try {
+      final box = await _ensureBoxOpened();
       book.dateModified = DateTime.now();
-      await _booksBox.put(book.id, book);
+      await box.put(book.id, book);
     } catch (e) {
       throw 'Failed to update book: $e';
     }
@@ -34,7 +44,8 @@ class LocalDatabaseService {
   // Delete a book
   Future<void> deleteBook(String bookId) async {
     try {
-      await _booksBox.delete(bookId);
+      final box = await _ensureBoxOpened();
+      await box.delete(bookId);
     } catch (e) {
       throw 'Failed to delete book: $e';
     }
@@ -43,16 +54,30 @@ class LocalDatabaseService {
   // Get a single book
   Future<Book?> getBook(String bookId) async {
     try {
-      return _booksBox.get(bookId);
+      final box = await _ensureBoxOpened();
+      return box.get(bookId);
     } catch (e) {
       throw 'Failed to get book: $e';
     }
   }
 
+  // Ensure box is opened (sync version)
+  Box<Book> _getBox() {
+    if (_booksBox == null || !_booksBox!.isOpen) {
+      if (Hive.isBoxOpen(_booksBoxName)) {
+        _booksBox = Hive.box<Book>(_booksBoxName);
+      } else {
+        throw 'Books database not initialized. Please restart the app.';
+      }
+    }
+    return _booksBox!;
+  }
+
   // Get all books for a user
   List<Book> getUserBooks(String userId) {
     try {
-      return _booksBox.values
+      final box = _getBox();
+      return box.values
           .where((book) => book.userId == userId)
           .toList()
         ..sort((a, b) => b.dateAdded.compareTo(a.dateAdded));
@@ -64,7 +89,8 @@ class LocalDatabaseService {
   // Get books by status
   List<Book> getBooksByStatus(String userId, ReadingStatus status) {
     try {
-      return _booksBox.values
+      final box = _getBox();
+      return box.values
           .where((book) => book.userId == userId && book.status == status)
           .toList()
         ..sort((a, b) => b.dateAdded.compareTo(a.dateAdded));
@@ -76,8 +102,9 @@ class LocalDatabaseService {
   // Search books by title or author
   List<Book> searchBooks(String userId, String query) {
     try {
+      final box = _getBox();
       final queryLower = query.toLowerCase();
-      return _booksBox.values.where((book) {
+      return box.values.where((book) {
         if (book.userId != userId) return false;
         final titleMatch = book.title.toLowerCase().contains(queryLower);
         final authorMatch = book.author?.toLowerCase().contains(queryLower) ?? false;
@@ -148,7 +175,8 @@ class LocalDatabaseService {
   // Check if ISBN already exists for user
   bool isbnExists(String userId, String isbn) {
     try {
-      return _booksBox.values.any(
+      final box = _getBox();
+      return box.values.any(
         (book) => book.userId == userId && book.isbn == isbn,
       );
     } catch (e) {
@@ -164,7 +192,8 @@ class LocalDatabaseService {
   // Clear all data (for testing/debugging)
   Future<void> clearAllData() async {
     try {
-      await _booksBox.clear();
+      final box = await _ensureBoxOpened();
+      await box.clear();
     } catch (e) {
       throw 'Failed to clear data: $e';
     }
