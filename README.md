@@ -1,6 +1,6 @@
 # Book Catalog - AI-Powered Book Management App
 
-A comprehensive Flutter application for cataloging your books with AI-powered book identification using Google Gemini, barcode scanning, and cloud synchronization.
+A comprehensive Flutter application for cataloging your books with AI-powered book identification using Google Gemini, barcode scanning, and **local-first storage** for complete privacy.
 
 ## Features
 
@@ -9,8 +9,9 @@ A comprehensive Flutter application for cataloging your books with AI-powered bo
 - 🤖 **AI Book Recognition**: Identify books using Google Gemini AI from cover images or title pages
 - 📷 **Barcode Scanner**: Quickly add books by scanning ISBN barcodes
 - ✍️ **Manual Entry**: Add books manually with full control over details
-- ☁️ **Cloud Sync**: Access your catalog across multiple devices via Firebase
-- 🔐 **User Authentication**: Secure user accounts with Firebase Auth
+- 💾 **Local Storage**: All data stored locally on your device (Hive database)
+- 🔐 **Local Authentication**: Secure user accounts with SHA-256 password hashing
+- 🔒 **Privacy First**: Your data never leaves your device
 
 ### Book Management
 - **Comprehensive Book Information**:
@@ -31,15 +32,17 @@ A comprehensive Flutter application for cataloging your books with AI-powered bo
 - 📊 **Reading Statistics**: Track your reading habits and progress
 - 📤 **Export**: Export your catalog as CSV or JSON
 - 🌐 **Multi-API Support**: Fetches book metadata from Google Books and Open Library
+- ⚡ **Works Offline**: Core features work without internet (except AI and book lookup)
 
 ## Technology Stack
 
 - **Framework**: Flutter 3.2+
-- **Backend**: Firebase (Auth, Firestore, Storage)
+- **Database**: Hive (Local NoSQL database)
+- **Authentication**: Local email/password with SHA-256 hashing
 - **AI**: Google Gemini API
 - **State Management**: Provider
 - **APIs**: Google Books API, Open Library API
-- **Platforms**: iOS, Android, Web
+- **Platforms**: iOS, Android, Web, Linux, macOS, Windows
 
 ## Prerequisites
 
@@ -49,13 +52,12 @@ Before you begin, ensure you have the following installed:
    - Download from [flutter.dev](https://flutter.dev/docs/get-started/install)
    - Verify installation: `flutter doctor`
 
-2. **Firebase Account**
-   - Create a Firebase project at [firebase.google.com](https://firebase.google.com)
-
-3. **Google Gemini API Key**
+2. **Google Gemini API Key** (Optional - for AI features)
    - Get your API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
 
-## Installation & Setup
+That's it! No Firebase, no cloud setup, no configuration files needed.
+
+## Quick Start
 
 ### 1. Clone the Repository
 
@@ -70,151 +72,62 @@ cd BookCatalog
 flutter pub get
 ```
 
-### 3. Firebase Setup
+### 3. Run the App
 
-#### For Android:
-
-1. Go to [Firebase Console](https://console.firebase.google.com)
-2. Create a new project or select existing
-3. Add an Android app:
-   - Package name: `com.bookcatalog.book_catalog`
-   - Download `google-services.json`
-   - Place it in `android/app/google-services.json`
-
-4. Update `android/build.gradle`:
-```gradle
-buildscript {
-    dependencies {
-        classpath 'com.google.gms:google-services:4.3.15'
-    }
-}
-```
-
-5. Update `android/app/build.gradle`:
-```gradle
-apply plugin: 'com.google.gms.google-services'
-
-android {
-    ...
-    defaultConfig {
-        applicationId "com.bookcatalog.book_catalog"
-        minSdkVersion 21  // Required for mobile_scanner
-        targetSdkVersion 33
-        ...
-    }
-}
-```
-
-#### For iOS:
-
-1. In Firebase Console, add an iOS app:
-   - Bundle ID: `com.bookcatalog.bookCatalog`
-   - Download `GoogleService-Info.plist`
-   - Place it in `ios/Runner/GoogleService-Info.plist`
-
-2. Update `ios/Runner/Info.plist`:
-```xml
-<!-- Camera Permission -->
-<key>NSCameraUsageDescription</key>
-<string>Camera access is required to scan book barcodes and capture book covers</string>
-
-<!-- Photo Library Permission -->
-<key>NSPhotoLibraryUsageDescription</key>
-<string>Photo library access is required to select book cover images</string>
-```
-
-3. Set minimum iOS version in `ios/Podfile`:
-```ruby
-platform :ios, '12.0'
-```
-
-#### For Web:
-
-1. In Firebase Console, add a Web app
-2. Copy the Firebase configuration
-3. Create `web/firebase-config.js`:
-```javascript
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
-```
-
-4. Update `web/index.html` to include Firebase scripts
-
-#### Enable Firebase Services:
-
-1. **Authentication**:
-   - In Firebase Console → Authentication
-   - Enable Email/Password sign-in method
-
-2. **Firestore Database**:
-   - In Firebase Console → Firestore Database
-   - Create database in production mode
-   - Set up security rules:
-
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Users collection
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Books collection
-    match /books/{bookId} {
-      allow read, write: if request.auth != null &&
-                           request.resource.data.userId == request.auth.uid;
-      allow read: if request.auth != null &&
-                     resource.data.userId == request.auth.uid;
-    }
-  }
-}
-```
-
-3. **Storage** (Optional):
-   - In Firebase Console → Storage
-   - Use for storing user-uploaded book covers
-
-### 4. Configure Google Gemini API
-
-The app requires a Google Gemini API key for AI book identification:
-
-1. Get your API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. The app will prompt for the API key on first use
-3. Alternatively, you can hardcode it in the app (not recommended for production):
-
-Update `lib/providers/books_provider.dart`:
-```dart
-void initializeGemini(String apiKey) {
-  _geminiService.initialize(apiKey);
-}
-```
-
-Call this in `lib/main.dart` after Firebase initialization:
-```dart
-final booksProvider = Provider.of<BooksProvider>(context, listen: false);
-booksProvider.initializeGemini('YOUR_GEMINI_API_KEY');
-```
-
-## Running the Application
-
-### For Android/iOS:
 ```bash
+# Web (Chrome)
+flutter run -d chrome
+
+# Linux Desktop
+flutter run -d linux
+
+# macOS Desktop
+flutter run -d macos
+
+# Mobile (Android/iOS)
 flutter run
 ```
 
-### For Web:
-```bash
-flutter run -d chrome
-```
+**That's it!** No setup, no configuration. Just run and start cataloging your books!
 
-### Build for Production:
+## First Run
+
+On first launch:
+
+1. **Create Account**: Register with email and password (stored locally)
+2. **Start Adding Books**: Use AI scanner, barcode scanner, or manual entry
+3. **(Optional) Add Gemini API Key**: If you want AI book identification, add your Gemini API key in settings
+
+## Local Database
+
+All your data is stored **locally on your device** using Hive database:
+
+- **No Internet Required** (except for AI features and book metadata lookup)
+- **Complete Privacy** - your data never leaves your device
+- **Fast Performance** - instant access to your library
+- **No Account Limits** - catalog unlimited books
+
+For more details, see **[LOCAL_DATABASE_SETUP.md](LOCAL_DATABASE_SETUP.md)**
+
+### Data Location
+
+Your books are stored locally at:
+- **Linux**: `~/.local/share/book_catalog/`
+- **macOS**: `~/Library/Containers/com.bookcatalog.bookCatalog/Data/Documents/`
+- **Windows**: `%APPDATA%\book_catalog\`
+- **Web**: Browser IndexedDB
+- **Mobile**: App sandbox directory
+
+## SSH Testing
+
+For testing the app on remote servers or local networks, see **[SSH_TESTING_GUIDE.md](SSH_TESTING_GUIDE.md)**
+
+## Building for Production
+
+**Linux Desktop:**
+```bash
+flutter build linux --release
+```
 
 **Android APK:**
 ```bash
@@ -226,9 +139,14 @@ flutter build apk --release
 flutter build ios --release
 ```
 
-**Web:**
+**macOS:**
 ```bash
-flutter build web --release
+flutter build macos --release
+```
+
+**Windows:**
+```bash
+flutter build windows --release
 ```
 
 ## Project Structure
@@ -241,12 +159,13 @@ lib/
 │   ├── theme/                     # Theme configuration
 │   └── utils/                     # Utility functions
 ├── models/
-│   ├── book.dart                  # Book data model
+│   ├── book.dart                  # Book data model (with Hive annotations)
+│   ├── book.g.dart                # Generated Hive adapter
 │   ├── user_model.dart            # User data model
 │   └── reading_status.dart        # Reading status enum
 ├── services/
-│   ├── auth_service.dart          # Firebase authentication
-│   ├── firestore_service.dart     # Firestore database operations
+│   ├── local_auth_service.dart    # Local authentication (SHA-256)
+│   ├── local_database_service.dart# Hive database operations
 │   ├── gemini_service.dart        # Google Gemini AI integration
 │   ├── google_books_service.dart  # Google Books API
 │   ├── open_library_service.dart  # Open Library API
@@ -314,20 +233,18 @@ For each book, you can track:
 
 ## Configuration
 
-### Gemini API Key Setup
+### Gemini API Key Setup (Optional)
 
-You can configure the Gemini API key in multiple ways:
+For AI book identification features, you can configure the Gemini API key:
 
-1. **Environment Variable** (Recommended):
+1. **In-App** (Recommended):
+   - The app will prompt for API key when you first use AI features
+   - Or add it in Settings → API Configuration
+
+2. **Environment Variable**:
 ```bash
 export GEMINI_API_KEY="your_api_key_here"
 ```
-
-2. **Runtime Configuration**:
-The app will prompt for API key on first AI feature use
-
-3. **Hardcode** (Development only):
-Update in `lib/providers/books_provider.dart`
 
 ### Permissions
 
@@ -335,29 +252,54 @@ The app requires the following permissions:
 
 - **Camera**: For barcode scanning and capturing book covers
 - **Photo Library**: For selecting book cover images
-- **Internet**: For API calls and Firebase sync
+- **Internet**: For AI API calls and book metadata lookup (optional)
+
+## Backup & Data Management
+
+### Export Your Data
+
+1. Open the app
+2. Go to **Statistics** screen
+3. Tap **Export** → Choose format:
+   - **CSV** - For Excel/spreadsheets
+   - **JSON** - For backup/import
+
+### Data Backup
+
+**Important**: Since data is stored locally:
+- Export your catalog regularly for backup
+- Before uninstalling the app, export your data first
+- Transfer exports to new devices if needed
+
+See **[LOCAL_DATABASE_SETUP.md](LOCAL_DATABASE_SETUP.md)** for more details.
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Firebase not initialized**:
-   - Ensure `google-services.json` (Android) or `GoogleService-Info.plist` (iOS) is in the correct location
-   - Run `flutter clean` and rebuild
+1. **Login/Signup not working**:
+   - Check that you're entering a valid email format
+   - Passwords are hashed and stored locally
+   - If you forget your password, you'll need to create a new account
 
 2. **Barcode scanner not working**:
    - Check camera permissions
-   - Ensure minSdkVersion is at least 21 for Android
+   - Ensure good lighting and focus
+   - Hold barcode steady
 
 3. **AI book identification fails**:
    - Verify Gemini API key is valid
    - Check internet connection
-   - Ensure image quality is good
+   - Ensure image quality is good and text is readable
 
 4. **Build errors**:
    - Run `flutter pub get`
-   - Run `flutter clean`
-   - Delete `ios/Pods` and `ios/Podfile.lock`, then run `pod install`
+   - Run `flutter clean && flutter pub get`
+   - For Hive errors, regenerate adapters: `flutter pub run build_runner build --delete-conflicting-outputs`
+
+5. **Data not showing**:
+   - Data is user-specific - make sure you're logged into the correct account
+   - Check that books were added under the current user
 
 ## Contributing
 
@@ -378,7 +320,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Google Gemini AI for book identification
 - Google Books API for book metadata
 - Open Library API for additional book data
-- Firebase for backend services
+- Hive for fast local database
 - Flutter team for the amazing framework
 
 ## Support
@@ -386,19 +328,23 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 For issues and questions:
 - Open an issue on GitHub
 - Check existing issues for solutions
+- Review [LOCAL_DATABASE_SETUP.md](LOCAL_DATABASE_SETUP.md) for database questions
+- Review [SSH_TESTING_GUIDE.md](SSH_TESTING_GUIDE.md) for testing setup
 
 ## Roadmap
 
 Future enhancements:
-- [ ] Offline mode with local caching
-- [ ] Book recommendations
+- [x] ~~Offline mode with local caching~~ ✅ **Implemented!** (Local-first with Hive)
+- [ ] Optional cloud sync (for multi-device access)
+- [ ] Book recommendations based on your library
 - [ ] Reading goals and challenges
-- [ ] Social features (share books, reviews)
 - [ ] Dark mode
 - [ ] Multiple language support
-- [ ] Book lending tracker
-- [ ] Integration with Goodreads
-- [ ] Advanced analytics
+- [ ] Book lending tracker (who borrowed which book)
+- [ ] Integration with Goodreads/OpenLibrary
+- [ ] Advanced analytics and reading insights
+- [ ] Book series tracking
+- [ ] Wishlist for books to buy
 
 ---
 
