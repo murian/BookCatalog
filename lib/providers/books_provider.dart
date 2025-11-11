@@ -163,7 +163,7 @@ class BooksProvider with ChangeNotifier {
       if (!_geminiService.isInitialized) {
         _errorMessage = 'Gemini AI is not initialized. Please provide an API key.';
         notifyListeners();
-        return null;
+        throw 'Gemini AI is not initialized';
       }
 
       _isLoading = true;
@@ -179,7 +179,7 @@ class BooksProvider with ChangeNotifier {
       _errorMessage = 'Failed to identify book: $e';
       _isLoading = false;
       notifyListeners();
-      return null;
+      rethrow; // Re-throw so the UI can catch and display it
     }
   }
 
@@ -189,7 +189,7 @@ class BooksProvider with ChangeNotifier {
       if (!_geminiService.isInitialized) {
         _errorMessage = 'Gemini AI is not initialized. Please provide an API key.';
         notifyListeners();
-        return null;
+        throw 'Gemini AI is not initialized';
       }
 
       _isLoading = true;
@@ -205,7 +205,7 @@ class BooksProvider with ChangeNotifier {
       _errorMessage = 'Failed to identify book: $e';
       _isLoading = false;
       notifyListeners();
-      return null;
+      rethrow; // Re-throw so the UI can catch and display it
     }
   }
 
@@ -215,7 +215,7 @@ class BooksProvider with ChangeNotifier {
       if (!_geminiService.isInitialized) {
         _errorMessage = 'Gemini AI is not initialized. Please provide an API key.';
         notifyListeners();
-        return null;
+        throw 'Gemini AI is not initialized';
       }
 
       _isLoading = true;
@@ -231,7 +231,7 @@ class BooksProvider with ChangeNotifier {
       _errorMessage = 'Failed to extract ISBN: $e';
       _isLoading = false;
       notifyListeners();
-      return null;
+      rethrow; // Re-throw so the UI can catch and display it
     }
   }
 
