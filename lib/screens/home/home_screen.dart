@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/books_provider.dart';
 import '../../models/book.dart';
 import '../../models/reading_status.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/date_utils.dart' as app_date_utils;
+import '../../widgets/book_cover_image.dart';
 import '../add_book/add_book_screen.dart';
 import '../book_details/book_details_screen.dart';
 import '../statistics/statistics_screen.dart';
@@ -43,45 +44,73 @@ class _HomeScreenState extends State<HomeScreen> {
     final booksProvider = Provider.of<BooksProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Books'),
-        backgroundColor: const Color(0xFF6200EE),
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.bar_chart),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const StatisticsScreen(),
-                ),
-              );
-            },
-          ),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'logout') {
-                authProvider.signOut();
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'logout',
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: AppTheme.primaryGradient,
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Modern AppBar
+              Padding(
+                padding: const EdgeInsets.all(16.0),
                 child: Row(
                   children: [
-                    Icon(Icons.logout),
-                    SizedBox(width: 8),
-                    Text('Logout'),
+                    const Icon(Icons.auto_stories_rounded, color: Colors.white, size: 28),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'My Books',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.bar_chart_rounded, color: Colors.white),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const StatisticsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
+                      onSelected: (value) {
+                        if (value == 'logout') {
+                          authProvider.signOut();
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'logout',
+                          child: Row(
+                            children: [
+                              Icon(Icons.logout_rounded),
+                              SizedBox(width: 8),
+                              Text('Logout'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
-            ],
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
+
+              // Main Content Area
+              Expanded(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: AppTheme.backgroundColor,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+                  ),
+                  child: Column(
+                    children: [
           // Search Bar
           Padding(
             padding: const EdgeInsets.all(16.0),
@@ -201,8 +230,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       return _BookCard(book: book);
                     },
                   ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
@@ -213,7 +248,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           );
         },
-        icon: const Icon(Icons.add),
+        icon: const Icon(Icons.add_rounded),
         label: const Text('Add Book'),
       ),
     );
@@ -244,35 +279,11 @@ class _BookCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Book Cover
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: book.coverImageUrl != null
-                    ? CachedNetworkImage(
-                        imageUrl: book.coverImageUrl!,
-                        width: 80,
-                        height: 120,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          width: 80,
-                          height: 120,
-                          color: Colors.grey[300],
-                          child: const Center(
-                            child: CircularProgressIndicator(),
-                          ),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          width: 80,
-                          height: 120,
-                          color: Colors.grey[300],
-                          child: const Icon(Icons.book, size: 40),
-                        ),
-                      )
-                    : Container(
-                        width: 80,
-                        height: 120,
-                        color: Colors.grey[300],
-                        child: const Icon(Icons.book, size: 40),
-                      ),
+              BookCoverImage(
+                imageUrl: book.coverImageUrl,
+                width: 80,
+                height: 120,
+                borderRadius: BorderRadius.circular(12),
               ),
               const SizedBox(width: 16),
 
@@ -341,11 +352,11 @@ class _BookCard extends StatelessWidget {
   Color _getStatusColor(ReadingStatus status) {
     switch (status) {
       case ReadingStatus.toRead:
-        return Colors.blue;
+        return AppTheme.secondaryColor;
       case ReadingStatus.reading:
-        return Colors.orange;
+        return AppTheme.warningColor;
       case ReadingStatus.finished:
-        return Colors.green;
+        return AppTheme.successColor;
     }
   }
 }
