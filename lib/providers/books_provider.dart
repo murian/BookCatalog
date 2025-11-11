@@ -6,12 +6,14 @@ import '../services/local_database_service.dart';
 import '../services/gemini_service.dart';
 import '../services/google_books_service.dart';
 import '../services/open_library_service.dart';
+import '../services/book_cover_service.dart';
 
 class BooksProvider with ChangeNotifier {
   final LocalDatabaseService _databaseService = LocalDatabaseService();
   final GeminiService _geminiService = GeminiService();
   final GoogleBooksService _googleBooksService = GoogleBooksService();
   final OpenLibraryService _openLibraryService = OpenLibraryService();
+  final BookCoverService _coverService = BookCoverService();
 
   List<Book> _books = [];
   List<Book> _filteredBooks = [];
@@ -149,6 +151,11 @@ class BooksProvider with ChangeNotifier {
       );
       results.addAll(openLibraryResults);
 
+      // Enrich results with fallback covers if needed
+      for (int i = 0; i < results.length; i++) {
+        results[i] = await _enrichWithCover(results[i]);
+      }
+
       return results;
     } catch (e) {
       _errorMessage = 'Failed to search books: $e';
@@ -255,6 +262,11 @@ class BooksProvider with ChangeNotifier {
         allResults.add(openLibraryResult);
       }
 
+      // Enrich results with fallback covers if needed
+      for (int i = 0; i < allResults.length; i++) {
+        allResults[i] = await _enrichWithCover(allResults[i]);
+      }
+
       _isLoading = false;
       notifyListeners();
 
@@ -265,6 +277,34 @@ class BooksProvider with ChangeNotifier {
       notifyListeners();
       return [];
     }
+  }
+
+  // Enrich book data with cover from fallback sources if missing
+  Future<Map<String, dynamic>> _enrichWithCover(Map<String, dynamic> bookData) async {
+    try {
+      // Check if cover is missing or null
+      final currentCover = bookData['coverImageUrl'];
+      if (currentCover == null || currentCover.toString().isEmpty) {
+        print('📚 Book "${bookData['title']}" has no cover, trying fallback sources...');
+
+        // Try to find a cover using our fallback service
+        final cover = await _coverService.findCover(
+          isbn: bookData['isbn'],
+          title: bookData['title'],
+          author: bookData['author'],
+        );
+
+        if (cover != null) {
+          bookData['coverImageUrl'] = cover;
+          print('✅ Found fallback cover for "${bookData['title']}"');
+        } else {
+          print('❌ No cover found for "${bookData['title']}"');
+        }
+      }
+    } catch (e) {
+      print('Error enriching cover: $e');
+    }
+    return bookData;
   }
 
   // Get reading statistics

@@ -74,11 +74,17 @@ class OpenLibraryService {
         }
       }
 
-      // Get cover image
+      // Get cover image - try multiple sources
       String? coverImageUrl;
       if (data['covers'] != null && (data['covers'] as List).isNotEmpty) {
         final coverId = data['covers'][0];
         coverImageUrl = 'https://covers.openlibrary.org/b/id/$coverId-L.jpg';
+      }
+
+      // Fallback: Try ISBN-based cover if no cover ID available
+      if (coverImageUrl == null || coverImageUrl.isEmpty) {
+        final cleanIsbn = isbn.replaceAll(RegExp(r'[-\s]'), '');
+        coverImageUrl = 'https://covers.openlibrary.org/b/isbn/$cleanIsbn-L.jpg';
       }
 
       return {
@@ -114,10 +120,16 @@ class OpenLibraryService {
         isbn = (doc['isbn'] as List).first;
       }
 
-      // Get cover image
+      // Get cover image - try multiple sources
       String? coverImageUrl;
       if (doc['cover_i'] != null) {
         coverImageUrl = 'https://covers.openlibrary.org/b/id/${doc['cover_i']}-L.jpg';
+      }
+
+      // Fallback: Try ISBN-based cover if no cover_i available
+      if ((coverImageUrl == null || coverImageUrl.isEmpty) && isbn != null) {
+        final cleanIsbn = isbn.replaceAll(RegExp(r'[-\s]'), '');
+        coverImageUrl = 'https://covers.openlibrary.org/b/isbn/$cleanIsbn-L.jpg';
       }
 
       // Get author
