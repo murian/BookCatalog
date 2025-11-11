@@ -13,16 +13,23 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Firebase
-  await Firebase.initializeApp(
-    options: const FirebaseOptions(
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-      appId: "YOUR_APP_ID",
-    ),
-  );
+  try {
+    await Firebase.initializeApp(
+      options: const FirebaseOptions(
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_PROJECT_ID.appspot.com",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID",
+      ),
+    );
+    print('✅ Firebase initialized successfully');
+  } catch (e) {
+    print('❌ Firebase initialization failed: $e');
+    print('⚠️  IMPORTANT: You need to configure Firebase credentials in lib/main.dart');
+    print('📖 See FIREBASE_SETUP.md for instructions');
+  }
 
   // Initialize Hive (kept for local caching/preferences)
   await Hive.initFlutter();

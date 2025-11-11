@@ -42,6 +42,7 @@ class FirebaseAuthService {
         photoUrl: firebaseUser.photoURL,
       );
     } on FirebaseAuthException catch (e) {
+      print('🔥 FirebaseAuthException (signup): ${e.code} - ${e.message}');
       switch (e.code) {
         case 'weak-password':
           throw 'The password provided is too weak.';
@@ -49,11 +50,20 @@ class FirebaseAuthService {
           throw 'An account already exists for that email.';
         case 'invalid-email':
           throw 'The email address is invalid.';
+        case 'app-not-authorized':
+          throw 'Firebase not configured. Please check FIREBASE_SETUP.md';
+        case 'api-key-not-valid':
+          throw 'Invalid Firebase API key. Please configure Firebase in lib/main.dart';
         default:
-          throw 'An error occurred: ${e.message}';
+          throw 'Registration error: ${e.message ?? e.code}';
       }
     } catch (e) {
-      throw 'An unexpected error occurred: $e';
+      print('❌ Signup error: $e');
+      if (e.toString().contains('MissingPluginException') ||
+          e.toString().contains('PlatformException')) {
+        throw 'Firebase not properly configured. Please see FIREBASE_SETUP.md for setup instructions.';
+      }
+      throw 'Registration failed: $e';
     }
   }
 
@@ -80,6 +90,7 @@ class FirebaseAuthService {
         photoUrl: firebaseUser.photoURL,
       );
     } on FirebaseAuthException catch (e) {
+      print('🔥 FirebaseAuthException: ${e.code} - ${e.message}');
       switch (e.code) {
         case 'user-not-found':
           throw 'No user found for that email.';
@@ -91,11 +102,20 @@ class FirebaseAuthService {
           throw 'This account has been disabled.';
         case 'invalid-credential':
           throw 'Invalid email or password.';
+        case 'app-not-authorized':
+          throw 'Firebase not configured. Please check FIREBASE_SETUP.md';
+        case 'api-key-not-valid':
+          throw 'Invalid Firebase API key. Please configure Firebase in lib/main.dart';
         default:
-          throw 'An error occurred: ${e.message}';
+          throw 'Authentication error: ${e.message ?? e.code}';
       }
     } catch (e) {
-      throw 'An unexpected error occurred: $e';
+      print('❌ Login error: $e');
+      if (e.toString().contains('MissingPluginException') ||
+          e.toString().contains('PlatformException')) {
+        throw 'Firebase not properly configured. Please see FIREBASE_SETUP.md for setup instructions.';
+      }
+      throw 'Login failed: $e';
     }
   }
 
