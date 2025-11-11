@@ -228,6 +228,64 @@ class BooksProvider with ChangeNotifier {
     }
   }
 
+  // Extract ISBN from barcode image
+  Future<String?> extractISBNFromImage(Uint8List imageBytes) async {
+    try {
+      if (!_geminiService.isInitialized) {
+        _errorMessage = 'Gemini AI is not initialized. Please provide an API key.';
+        notifyListeners();
+        return null;
+      }
+
+      _isLoading = true;
+      notifyListeners();
+
+      final isbn = await _geminiService.extractISBNFromBarcode(imageBytes);
+
+      _isLoading = false;
+      notifyListeners();
+
+      return isbn;
+    } catch (e) {
+      _errorMessage = 'Failed to extract ISBN: $e';
+      _isLoading = false;
+      notifyListeners();
+      return null;
+    }
+  }
+
+  // Search book by ISBN across multiple providers
+  Future<List<Map<String, dynamic>>> searchBookByISBN(String isbn) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      List<Map<String, dynamic>> allResults = [];
+
+      // Search in Google Books
+      final googleResult = await _googleBooksService.searchByISBN(isbn);
+      if (googleResult != null) {
+        allResults.add(googleResult);
+      }
+
+      // Search in Open Library
+      final openLibraryResult = await _openLibraryService.searchByISBN(isbn);
+      if (openLibraryResult != null) {
+        allResults.add(openLibraryResult);
+      }
+
+      _isLoading = false;
+      notifyListeners();
+
+      return allResults;
+    } catch (e) {
+      _errorMessage = 'Failed to search by ISBN: $e';
+      _isLoading = false;
+      notifyListeners();
+      return [];
+    }
+  }
+
   // Get reading statistics
   Map<String, dynamic>? getStatistics(String userId) {
     try {

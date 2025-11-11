@@ -16,6 +16,56 @@ class GeminiService {
 
   bool get isInitialized => _initialized;
 
+  // Extract ISBN from barcode image
+  Future<String?> extractISBNFromBarcode(Uint8List imageBytes) async {
+    if (!_initialized) {
+      throw 'Gemini service not initialized. Please provide an API key.';
+    }
+
+    try {
+      final prompt = '''
+Look at this image and extract the ISBN barcode number.
+The ISBN can be:
+- ISBN-13 (13 digits, often starts with 978 or 979)
+- ISBN-10 (10 digits)
+
+Return ONLY the ISBN number with no extra text, dashes, or spaces.
+If you cannot find an ISBN, return "NONE".
+
+Example responses:
+9780134685991
+0134685997
+NONE
+''';
+
+      final content = [
+        Content.multi([
+          TextPart(prompt),
+          DataPart('image/jpeg', imageBytes),
+        ])
+      ];
+
+      final response = await _model.generateContent(content);
+      final text = response.text?.trim() ?? '';
+
+      // Clean up the response
+      final cleanedText = text.replaceAll(RegExp(r'[^0-9]'), '');
+
+      if (cleanedText.isEmpty || text.toUpperCase().contains('NONE')) {
+        return null;
+      }
+
+      // Validate ISBN length
+      if (cleanedText.length == 10 || cleanedText.length == 13) {
+        return cleanedText;
+      }
+
+      return null;
+    } catch (e) {
+      throw 'Failed to extract ISBN from barcode: $e';
+    }
+  }
+
   // Identify book from cover image
   Future<Map<String, dynamic>> identifyBookFromCover(Uint8List imageBytes) async {
     if (!_initialized) {

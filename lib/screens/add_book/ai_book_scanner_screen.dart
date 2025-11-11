@@ -114,6 +114,105 @@ class _AIBookScannerScreenState extends State<AIBookScannerScreen> {
     return result ?? false;
   }
 
+  Future<void> _pickImageForISBN(ImageSource source) async {
+    try {
+      // Check if Gemini is initialized
+      final isInitialized = await _ensureGeminiInitialized();
+      if (!isInitialized) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Gemini API key is required for ISBN extraction'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+
+      if (image == null) return;
+
+      setState(() {
+        _isProcessing = true;
+      });
+
+      // Read image bytes
+      final Uint8List imageBytes = await image.readAsBytes();
+
+      // Extract ISBN using Gemini
+      final booksProvider = Provider.of<BooksProvider>(context, listen: false);
+      final isbn = await booksProvider.extractISBNFromImage(imageBytes);
+
+      setState(() {
+        _isProcessing = false;
+      });
+
+      if (!mounted) return;
+
+      if (isbn != null && isbn.isNotEmpty) {
+        // Search for book by ISBN in multiple sources
+        final searchResults = await booksProvider.searchBookByISBN(isbn);
+
+        if (mounted) {
+          if (searchResults.isNotEmpty) {
+            // Show results to user
+            _showBookResults(searchResults);
+          } else {
+            // No results found, but we have ISBN
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('ISBN found: $isbn, but no book details. Add manually?'),
+                backgroundColor: Colors.orange,
+                action: SnackBarAction(
+                  label: 'Add',
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => BookFormScreen(
+                          bookData: {'isbn': isbn},
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            );
+          }
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not extract ISBN from image. Please try again.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _isProcessing = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _pickImage(ImageSource source, bool isCover) async {
     try {
       // Check if Gemini is initialized, prompt for API key if not
@@ -251,27 +350,102 @@ class _AIBookScannerScreenState extends State<AIBookScannerScreen> {
                 itemCount: results.length,
                 itemBuilder: (context, index) {
                   final book = results[index];
-                  return ListTile(
-                    leading: book['coverImageUrl'] != null
-                        ? Image.network(
-                            book['coverImageUrl'],
-                            width: 40,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Icon(Icons.book),
-                          )
-                        : const Icon(Icons.book),
-                    title: Text(book['title'] ?? ''),
-                    subtitle: Text(book['author'] ?? ''),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => BookFormScreen(bookData: book),
-                        ),
-                      );
-                    },
+                  final source = book['source'] ?? 'Unknown';
+                  final publisher = book['publisher'] ?? '';
+                  final publishedDate = book['publishedDate'] ?? '';
+
+                  return Card(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: ListTile(
+                      leading: book['coverImageUrl'] != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                book['coverImageUrl'],
+                                width: 50,
+                                height: 75,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Container(
+                                      width: 50,
+                                      height: 75,
+                                      color: Colors.grey[300],
+                                      child: const Icon(Icons.book),
+                                    ),
+                              ),
+                            )
+                          : Container(
+                              width: 50,
+                              height: 75,
+                              color: Colors.grey[300],
+                              child: const Icon(Icons.book),
+                            ),
+                      title: Text(
+                        book['title'] ?? '',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (book['author'] != null)
+                            Text(
+                              book['author']!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: source == 'Google Books'
+                                      ? Colors.blue[100]
+                                      : Colors.green[100],
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  source,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: source == 'Google Books'
+                                        ? Colors.blue[900]
+                                        : Colors.green[900],
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              if (publisher.isNotEmpty) ...[
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    '$publisher${publishedDate.isNotEmpty ? ' • $publishedDate' : ''}',
+                                    style: const TextStyle(fontSize: 11),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => BookFormScreen(bookData: book),
+                          ),
+                        );
+                      },
+                    ),
                   );
                 },
               ),
@@ -350,6 +524,42 @@ class _AIBookScannerScreenState extends State<AIBookScannerScreen> {
                     onPressed: () => _pickImage(ImageSource.gallery, true),
                     icon: const Icon(Icons.photo_library),
                     label: const Text('Upload Book Cover'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.all(16),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Or scan the ISBN barcode',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Take Photo - ISBN Barcode
+                  ElevatedButton.icon(
+                    onPressed: () => _pickImageForISBN(ImageSource.camera),
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text('Capture ISBN Barcode'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.all(16),
+                      backgroundColor: const Color(0xFFF39C12),
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Upload Photo - ISBN Barcode
+                  OutlinedButton.icon(
+                    onPressed: () => _pickImageForISBN(ImageSource.gallery),
+                    icon: const Icon(Icons.photo_library),
+                    label: const Text('Upload ISBN Barcode'),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.all(16),
                     ),
