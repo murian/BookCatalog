@@ -50,24 +50,43 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
     // Stop camera
     await cameraController.stop();
 
-    // Search for book by ISBN
+    // Search for book by ISBN in multiple sources
     final booksProvider = Provider.of<BooksProvider>(context, listen: false);
-    final bookData = await booksProvider.searchBookByISBN(isbn);
+    final searchResults = await booksProvider.searchBookByISBN(isbn);
 
     if (mounted) {
-      if (bookData != null) {
-        // Navigate to book form with pre-filled data
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => BookFormScreen(bookData: bookData),
-          ),
-        );
+      if (searchResults.isNotEmpty) {
+        // If only one result, go directly to form
+        if (searchResults.length == 1) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => BookFormScreen(bookData: searchResults.first),
+            ),
+          );
+        } else {
+          // Show results to user if multiple
+          _showBookResults(searchResults);
+        }
       } else {
+        // No results found
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Book not found. Please add manually.'),
+          SnackBar(
+            content: Text('ISBN found: $isbn, but no book details. Add manually?'),
             backgroundColor: Colors.orange,
+            action: SnackBarAction(
+              label: 'Add',
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => BookFormScreen(
+                      bookData: {'isbn': isbn},
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
         );
         Navigator.pop(context);
@@ -77,6 +96,154 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
     setState(() {
       _isProcessing = false;
     });
+  }
+
+  void _showBookResults(List<Map<String, dynamic>> results) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Select Your Book',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                controller: scrollController,
+                itemCount: results.length,
+                itemBuilder: (context, index) {
+                  final book = results[index];
+                  final source = book['source'] ?? 'Unknown';
+                  final publisher = book['publisher'] ?? '';
+                  final publishedDate = book['publishedDate'] ?? '';
+
+                  return Card(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: ListTile(
+                      leading: book['coverImageUrl'] != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                book['coverImageUrl'],
+                                width: 50,
+                                height: 75,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Container(
+                                      width: 50,
+                                      height: 75,
+                                      color: Colors.grey[300],
+                                      child: const Icon(Icons.book),
+                                    ),
+                              ),
+                            )
+                          : Container(
+                              width: 50,
+                              height: 75,
+                              color: Colors.grey[300],
+                              child: const Icon(Icons.book),
+                            ),
+                      title: Text(
+                        book['title'] ?? '',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (book['author'] != null)
+                            Text(
+                              book['author']!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: source == 'Google Books'
+                                      ? Colors.blue[100]
+                                      : Colors.green[100],
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  source,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: source == 'Google Books'
+                                        ? Colors.blue[900]
+                                        : Colors.green[900],
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              if (publisher.isNotEmpty) ...[
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    '$publisher${publishedDate.isNotEmpty ? ' • $publishedDate' : ''}',
+                                    style: const TextStyle(fontSize: 11),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => BookFormScreen(bookData: book),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
