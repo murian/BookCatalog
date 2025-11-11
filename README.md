@@ -1,6 +1,6 @@
 # Book Catalog - AI-Powered Book Management App
 
-A comprehensive Flutter application for cataloging your books with AI-powered book identification using Google Gemini, barcode scanning, and **local-first storage** for complete privacy.
+A comprehensive Flutter application for cataloging your books with AI-powered book identification using Google Gemini, barcode scanning, and **cloud synchronization** with Firebase.
 
 ## Features
 
@@ -9,9 +9,9 @@ A comprehensive Flutter application for cataloging your books with AI-powered bo
 - 🤖 **AI Book Recognition**: Identify books using Google Gemini AI from cover images or title pages
 - 📷 **Barcode Scanner**: Quickly add books by scanning ISBN barcodes
 - ✍️ **Manual Entry**: Add books manually with full control over details
-- 💾 **Local Storage**: All data stored locally on your device (Hive database)
-- 🔐 **Local Authentication**: Secure user accounts with SHA-256 password hashing
-- 🔒 **Privacy First**: Your data never leaves your device
+- ☁️ **Cloud Sync**: Automatic synchronization across all your devices with Firebase
+- 🔐 **Secure Authentication**: Firebase Authentication with email/password
+- 🔄 **Cross-Device Access**: Access your library from phone, tablet, or web browser
 
 ### Book Management
 - **Comprehensive Book Information**:
@@ -32,13 +32,15 @@ A comprehensive Flutter application for cataloging your books with AI-powered bo
 - 📊 **Reading Statistics**: Track your reading habits and progress
 - 📤 **Export**: Export your catalog as CSV or JSON
 - 🌐 **Multi-API Support**: Fetches book metadata from Google Books and Open Library
-- ⚡ **Works Offline**: Core features work without internet (except AI and book lookup)
+- 📱 **Real-time Sync**: Changes sync instantly across all devices
+- 💾 **Offline Support**: Firestore caching allows offline access to your data
 
 ## Technology Stack
 
 - **Framework**: Flutter 3.2+
-- **Database**: Hive (Local NoSQL database)
-- **Authentication**: Local email/password with SHA-256 hashing
+- **Backend**: Firebase (Authentication + Firestore)
+- **Database**: Cloud Firestore for cloud storage, Hive for local caching
+- **Authentication**: Firebase Authentication with email/password
 - **AI**: Google Gemini API
 - **State Management**: Provider
 - **APIs**: Google Books API, Open Library API
@@ -46,16 +48,18 @@ A comprehensive Flutter application for cataloging your books with AI-powered bo
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed:
+Before you begin, ensure you have the following:
 
 1. **Flutter SDK** (3.2.0 or higher)
    - Download from [flutter.dev](https://flutter.dev/docs/get-started/install)
    - Verify installation: `flutter doctor`
 
-2. **Google Gemini API Key** (Optional - for AI features)
-   - Get your API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. **Firebase Project** (Required)
+   - Create a free Firebase project at [Firebase Console](https://console.firebase.google.com/)
+   - See [FIREBASE_SETUP.md](FIREBASE_SETUP.md) for detailed setup instructions
 
-That's it! No Firebase, no cloud setup, no configuration files needed.
+3. **Google Gemini API Key** (Optional - for AI features)
+   - Get your API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
 
 ## Quick Start
 
@@ -66,13 +70,24 @@ git clone <repository-url>
 cd BookCatalog
 ```
 
-### 2. Install Dependencies
+### 2. Set Up Firebase
+
+**IMPORTANT**: You must configure Firebase before running the app.
+
+Follow the detailed instructions in [FIREBASE_SETUP.md](FIREBASE_SETUP.md) to:
+1. Create a Firebase project
+2. Enable Authentication (Email/Password)
+3. Set up Firestore Database
+4. Get your Firebase configuration
+5. Update `lib/main.dart` with your Firebase credentials
+
+### 3. Install Dependencies
 
 ```bash
 flutter pub get
 ```
 
-### 3. Run the App
+### 4. Run the App
 
 ```bash
 # Web (Chrome)
@@ -88,35 +103,27 @@ flutter run -d macos
 flutter run
 ```
 
-**That's it!** No setup, no configuration. Just run and start cataloging your books!
-
 ## First Run
 
 On first launch:
 
-1. **Create Account**: Register with email and password (stored locally)
+1. **Create Account**: Register with email and password (stored securely in Firebase)
 2. **Start Adding Books**: Use AI scanner, barcode scanner, or manual entry
 3. **(Optional) Add Gemini API Key**: If you want AI book identification, add your Gemini API key in settings
+4. **Test Cross-Device Sync**: Sign in on another device with the same account to see your books sync!
 
-## Local Database
+## Cloud Sync with Firebase
 
-All your data is stored **locally on your device** using Hive database:
+Your data is stored securely in Firebase Cloud Firestore:
 
-- **No Internet Required** (except for AI features and book metadata lookup)
-- **Complete Privacy** - your data never leaves your device
-- **Fast Performance** - instant access to your library
-- **No Account Limits** - catalog unlimited books
+- **Real-time Sync**: Changes appear instantly across all your devices
+- **Offline Support**: Books are cached locally and sync when you're back online
+- **Secure**: Each user can only access their own books (enforced by Firestore security rules)
+- **Free Tier**: Firebase free plan includes 50K reads and 20K writes per day
+- **Fast Performance**: Automatic caching for instant access
+- **No Limits**: Catalog unlimited books within Firebase quotas
 
-For more details, see **[LOCAL_DATABASE_SETUP.md](LOCAL_DATABASE_SETUP.md)**
-
-### Data Location
-
-Your books are stored locally at:
-- **Linux**: `~/.local/share/book_catalog/`
-- **macOS**: `~/Library/Containers/com.bookcatalog.bookCatalog/Data/Documents/`
-- **Windows**: `%APPDATA%\book_catalog\`
-- **Web**: Browser IndexedDB
-- **Mobile**: App sandbox directory
+For Firebase setup details, see **[FIREBASE_SETUP.md](FIREBASE_SETUP.md)**
 
 ## SSH Testing
 

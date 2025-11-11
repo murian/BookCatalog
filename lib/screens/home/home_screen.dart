@@ -24,11 +24,15 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _loadBooksData();
+  }
+
+  Future<void> _loadBooksData() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final booksProvider = Provider.of<BooksProvider>(context, listen: false);
 
     if (authProvider.user != null) {
-      booksProvider.loadBooks(authProvider.user!.uid);
+      await booksProvider.loadBooks(authProvider.user!.uid);
     }
   }
 

@@ -2,14 +2,14 @@ import 'package:flutter/foundation.dart';
 import 'dart:typed_data';
 import '../models/book.dart';
 import '../models/reading_status.dart';
-import '../services/local_database_service.dart';
+import '../services/firestore_database_service.dart';
 import '../services/gemini_service.dart';
 import '../services/google_books_service.dart';
 import '../services/open_library_service.dart';
 import '../services/book_cover_service.dart';
 
 class BooksProvider with ChangeNotifier {
-  final LocalDatabaseService _databaseService = LocalDatabaseService();
+  final FirestoreDatabaseService _databaseService = FirestoreDatabaseService();
   final GeminiService _geminiService = GeminiService();
   final GoogleBooksService _googleBooksService = GoogleBooksService();
   final OpenLibraryService _openLibraryService = OpenLibraryService();
@@ -34,14 +34,20 @@ class BooksProvider with ChangeNotifier {
     _geminiService.initialize(apiKey);
   }
 
-  // Load books (no longer streaming, just load once)
-  void loadBooks(String userId) {
+  // Load books (async version for Firestore)
+  Future<void> loadBooks(String userId) async {
     try {
-      _books = _databaseService.getUserBooks(userId);
+      _isLoading = true;
+      notifyListeners();
+
+      _books = await _databaseService.getUserBooks(userId);
       _applyFilters();
+
+      _isLoading = false;
       notifyListeners();
     } catch (e) {
       _errorMessage = e.toString();
+      _isLoading = false;
       notifyListeners();
     }
   }
@@ -307,10 +313,10 @@ class BooksProvider with ChangeNotifier {
     return bookData;
   }
 
-  // Get reading statistics
-  Map<String, dynamic>? getStatistics(String userId) {
+  // Get reading statistics (async version for Firestore)
+  Future<Map<String, dynamic>?> getStatistics(String userId) async {
     try {
-      return _databaseService.getReadingStatistics(userId);
+      return await _databaseService.getReadingStatistics(userId);
     } catch (e) {
       _errorMessage = 'Failed to get statistics: $e';
       notifyListeners();

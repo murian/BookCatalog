@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
-import '../services/local_auth_service.dart';
+import '../services/firebase_auth_service.dart';
 
 class AuthProvider with ChangeNotifier {
-  final LocalAuthService _authService = LocalAuthService();
+  final FirebaseAuthService _authService = FirebaseAuthService();
   UserModel? _user;
   bool _isLoading = false;
   String? _errorMessage;

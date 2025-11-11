@@ -10,7 +10,12 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Local Database
+  # Firebase
+  firebase_core: ^2.24.2
+  firebase_auth: ^4.16.0
+  cloud_firestore: ^4.14.0
+
+  # Local Database (kept for caching/offline support)
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   crypto: ^3.0.3
