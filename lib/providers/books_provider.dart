@@ -127,25 +127,6 @@ class BooksProvider with ChangeNotifier {
     }
   }
 
-  // Search books by ISBN (Google Books and Open Library)
-  Future<Map<String, dynamic>?> searchBookByISBN(String isbn) async {
-    try {
-      // Try Google Books first
-      final googleResult = await _googleBooksService.searchByISBN(isbn);
-      if (googleResult != null) {
-        return googleResult;
-      }
-
-      // Fallback to Open Library
-      final openLibraryResult = await _openLibraryService.searchByISBN(isbn);
-      return openLibraryResult;
-    } catch (e) {
-      _errorMessage = 'Failed to search book by ISBN: $e';
-      notifyListeners();
-      return null;
-    }
-  }
-
   // Search books by title and author
   Future<List<Map<String, dynamic>>> searchBookByTitleAuthor({
     required String title,
