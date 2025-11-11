@@ -61,7 +61,7 @@ class BooksProvider with ChangeNotifier {
 
       // Check if ISBN already exists
       if (book.isbn != null && book.isbn!.isNotEmpty) {
-        final exists = _databaseService.isbnExists(book.userId, book.isbn!);
+        final exists = await _databaseService.isbnExists(book.userId, book.isbn!);
         if (exists) {
           _errorMessage = 'A book with this ISBN already exists in your catalog.';
           _isLoading = false;
@@ -73,7 +73,7 @@ class BooksProvider with ChangeNotifier {
       await _databaseService.addBook(book);
 
       // Reload books after adding
-      loadBooks(book.userId);
+      await loadBooks(book.userId);
 
       _isLoading = false;
       notifyListeners();
@@ -97,7 +97,7 @@ class BooksProvider with ChangeNotifier {
       await _databaseService.updateBook(book);
 
       // Reload books after updating
-      loadBooks(book.userId);
+      await loadBooks(book.userId);
 
       _isLoading = false;
       notifyListeners();
@@ -121,7 +121,7 @@ class BooksProvider with ChangeNotifier {
       await _databaseService.deleteBook(bookId);
 
       // Reload books after deleting
-      loadBooks(userId);
+      await loadBooks(userId);
 
       _isLoading = false;
       notifyListeners();
