@@ -66,8 +66,14 @@ class BookCoverImage extends StatelessWidget {
           width: width,
           height: height,
           fit: fit,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          },
           loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
+            if (loadingProgress == null) {
+              print('✅ Image loaded successfully: $cleanUrl');
+              return child;
+            }
             return Container(
               width: width,
               height: height,
@@ -91,7 +97,8 @@ class BookCoverImage extends StatelessWidget {
             );
           },
           errorBuilder: (context, error, stackTrace) {
-            // Try Open Library cover as fallback
+            print('❌ Image load failed: $cleanUrl');
+            print('Error: $error');
             return placeholder;
           },
         ),

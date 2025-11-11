@@ -98,18 +98,32 @@ class GoogleBooksService {
     String? coverImageUrl;
     if (volumeInfo['imageLinks'] != null) {
       final imageLinks = volumeInfo['imageLinks'] as Map<String, dynamic>;
-      coverImageUrl = imageLinks['large'] ??
+
+      // Try all available image sizes
+      coverImageUrl = imageLinks['extraLarge'] ??
+          imageLinks['large'] ??
           imageLinks['medium'] ??
+          imageLinks['small'] ??
           imageLinks['thumbnail'] ??
           imageLinks['smallThumbnail'];
 
-      // Upgrade to https and higher resolution
+      // Upgrade to https and request higher resolution
       if (coverImageUrl != null) {
         coverImageUrl = coverImageUrl
             .replaceAll('http://', 'https://')
-            .replaceAll('&zoom=1', '&zoom=2');
+            .replaceAll('&edge=curl', '')
+            .replaceAll('zoom=1', 'zoom=2')
+            .replaceAll('zoom=0', 'zoom=1');
+
+        // Ensure we get a good quality image
+        if (!coverImageUrl.contains('zoom=')) {
+          coverImageUrl = '$coverImageUrl&zoom=1';
+        }
       }
     }
+
+    // Debug log
+    print('Book: ${volumeInfo['title']}, Cover URL: $coverImageUrl');
 
     return {
       'title': volumeInfo['title'] ?? '',
