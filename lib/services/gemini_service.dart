@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:convert';
 import 'package:google_generative_ai/google_generative_ai.dart';
 
 class GeminiService {
@@ -153,39 +154,66 @@ Only return the JSON, no other text.
       }
       jsonText = jsonText.trim();
 
-      // Try to parse JSON
-      // Note: In production, use dart:convert's jsonDecode
-      // For now, we'll return a simple map structure
-      // This is a simplified parser - in real app use proper JSON parsing
+      // Debug log
+      print('Raw Gemini response: $text');
+      print('Cleaned JSON text: $jsonText');
 
-      final Map<String, dynamic> result = {};
+      // Try to parse JSON properly using dart:convert
+      try {
+        final parsed = jsonDecode(jsonText) as Map<String, dynamic>;
+        print('Successfully parsed JSON: $parsed');
 
-      // Extract title
-      final titleMatch = RegExp(r'"title"\s*:\s*"([^"]*)"').firstMatch(jsonText);
-      if (titleMatch != null) {
-        result['title'] = titleMatch.group(1);
+        // Filter out null values and ensure we have strings
+        final result = <String, dynamic>{};
+        if (parsed['title'] != null && parsed['title'].toString().isNotEmpty) {
+          result['title'] = parsed['title'].toString();
+        }
+        if (parsed['author'] != null && parsed['author'].toString().isNotEmpty) {
+          result['author'] = parsed['author'].toString();
+        }
+        if (parsed['isbn'] != null && parsed['isbn'].toString().isNotEmpty) {
+          result['isbn'] = parsed['isbn'].toString();
+        }
+        if (parsed['confidence'] != null) {
+          result['confidence'] = parsed['confidence'].toString();
+        }
+
+        print('Filtered result: $result');
+        return result;
+      } catch (jsonError) {
+        print('JSON parsing failed: $jsonError');
+        // Fallback to regex parsing if JSON decode fails
+        final Map<String, dynamic> result = {};
+
+        // Extract title
+        final titleMatch = RegExp(r'"title"\s*:\s*"([^"]*)"').firstMatch(jsonText);
+        if (titleMatch != null && titleMatch.group(1)!.isNotEmpty) {
+          result['title'] = titleMatch.group(1);
+        }
+
+        // Extract author
+        final authorMatch = RegExp(r'"author"\s*:\s*"([^"]*)"').firstMatch(jsonText);
+        if (authorMatch != null && authorMatch.group(1)!.isNotEmpty) {
+          result['author'] = authorMatch.group(1);
+        }
+
+        // Extract ISBN
+        final isbnMatch = RegExp(r'"isbn"\s*:\s*"([^"]*)"').firstMatch(jsonText);
+        if (isbnMatch != null && isbnMatch.group(1)!.isNotEmpty) {
+          result['isbn'] = isbnMatch.group(1);
+        }
+
+        // Extract confidence
+        final confidenceMatch = RegExp(r'"confidence"\s*:\s*"([^"]*)"').firstMatch(jsonText);
+        if (confidenceMatch != null) {
+          result['confidence'] = confidenceMatch.group(1);
+        }
+
+        print('Regex fallback result: $result');
+        return result;
       }
-
-      // Extract author
-      final authorMatch = RegExp(r'"author"\s*:\s*"([^"]*)"').firstMatch(jsonText);
-      if (authorMatch != null) {
-        result['author'] = authorMatch.group(1);
-      }
-
-      // Extract ISBN
-      final isbnMatch = RegExp(r'"isbn"\s*:\s*"([^"]*)"').firstMatch(jsonText);
-      if (isbnMatch != null) {
-        result['isbn'] = isbnMatch.group(1);
-      }
-
-      // Extract confidence
-      final confidenceMatch = RegExp(r'"confidence"\s*:\s*"([^"]*)"').firstMatch(jsonText);
-      if (confidenceMatch != null) {
-        result['confidence'] = confidenceMatch.group(1);
-      }
-
-      return result;
     } catch (e) {
+      print('Failed to parse Gemini response: $e');
       throw 'Failed to parse Gemini response: $e';
     }
   }

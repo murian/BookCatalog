@@ -202,11 +202,19 @@ class _AIBookScannerScreenState extends State<AIBookScannerScreen> {
         _isProcessing = false;
       });
 
+      print('Error during ISBN extraction: $e');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text('Error extracting ISBN: ${e.toString()}'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () => _pickImageForISBN(source),
+            ),
           ),
         );
       }
@@ -261,12 +269,18 @@ class _AIBookScannerScreenState extends State<AIBookScannerScreen> {
 
       if (!mounted) return;
 
-      if (aiResult != null && aiResult['title'] != null) {
+      print('AI Result: $aiResult');
+
+      if (aiResult != null && aiResult.isNotEmpty && aiResult['title'] != null && aiResult['title'].toString().isNotEmpty) {
+        print('Searching for book with title: ${aiResult['title']}, author: ${aiResult['author']}');
+
         // Search for book metadata
         final searchResults = await booksProvider.searchBookByTitleAuthor(
           title: aiResult['title'],
           author: aiResult['author'],
         );
+
+        print('Search results count: ${searchResults.length}');
 
         if (mounted) {
           if (searchResults.isNotEmpty) {
@@ -274,6 +288,7 @@ class _AIBookScannerScreenState extends State<AIBookScannerScreen> {
             _showBookResults(searchResults);
           } else {
             // Navigate to form with AI data
+            print('No search results, navigating to form with AI data');
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
@@ -284,10 +299,18 @@ class _AIBookScannerScreenState extends State<AIBookScannerScreen> {
         }
       } else {
         if (mounted) {
+          final errorMessage = aiResult == null || aiResult.isEmpty
+              ? 'Could not identify book from image. The image may be unclear or not contain book information.'
+              : 'Found partial information but missing title. Please try a clearer image or add manually.';
+
+          print('AI identification failed: $errorMessage');
+          print('AI result details: $aiResult');
+
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Could not identify book. Please try again or add manually.'),
+            SnackBar(
+              content: Text(errorMessage),
               backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 4),
             ),
           );
         }
@@ -297,11 +320,19 @@ class _AIBookScannerScreenState extends State<AIBookScannerScreen> {
         _isProcessing = false;
       });
 
+      print('Error during book identification: $e');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text('Error identifying book: ${e.toString()}'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () => _pickImage(source, isCover),
+            ),
           ),
         );
       }
