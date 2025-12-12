@@ -5,17 +5,21 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 class GeminiService {
   late GenerativeModel _model;
   bool _initialized = false;
+  String _currentModel = 'gemini-1.5-flash';
 
-  // Initialize Gemini with API key
-  void initialize(String apiKey) {
+  // Initialize Gemini with API key and optional model
+  void initialize(String apiKey, {String model = 'gemini-1.5-flash'}) {
+    _currentModel = model;
     _model = GenerativeModel(
-      model: 'gemini-2.5-flash',
+      model: _currentModel,
       apiKey: apiKey,
     );
     _initialized = true;
+    print('✅ Gemini initialized with model: $_currentModel');
   }
 
   bool get isInitialized => _initialized;
+  String get currentModel => _currentModel;
 
   // Extract ISBN from barcode image
   Future<String?> extractISBNFromBarcode(Uint8List imageBytes) async {

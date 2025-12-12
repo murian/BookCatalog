@@ -10,6 +10,7 @@ import '../../widgets/book_cover_image.dart';
 import '../add_book/add_book_screen.dart';
 import '../book_details/book_details_screen.dart';
 import '../statistics/statistics_screen.dart';
+import '../settings/settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -58,47 +59,85 @@ class _HomeScreenState extends State<HomeScreen> {
               // Modern AppBar
               Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.auto_stories_rounded, color: Colors.white, size: 28),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'My Books',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.bar_chart_rounded, color: Colors.white),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const StatisticsScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
-                      onSelected: (value) {
-                        if (value == 'logout') {
-                          authProvider.signOut();
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'logout',
-                          child: Row(
+                    Row(
+                      children: [
+                        const Icon(Icons.auto_stories_rounded, color: Colors.white, size: 28),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(Icons.logout_rounded),
-                              SizedBox(width: 8),
-                              Text('Logout'),
+                              const Text(
+                                'My Books',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              if (authProvider.user != null)
+                                Text(
+                                  authProvider.user!.displayName ?? authProvider.user!.email,
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontSize: 14,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                             ],
                           ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.bar_chart_rounded, color: Colors.white),
+                          tooltip: 'Statistics',
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const StatisticsScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        PopupMenuButton<String>(
+                          icon: const Icon(Icons.more_vert_rounded, color: Colors.white),
+                          onSelected: (value) {
+                            if (value == 'logout') {
+                              authProvider.signOut();
+                            } else if (value == 'settings') {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const SettingsScreen(),
+                                ),
+                              );
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'settings',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.settings),
+                                  SizedBox(width: 8),
+                                  Text('Settings'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'logout',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.logout_rounded),
+                                  SizedBox(width: 8),
+                                  Text('Logout'),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -195,46 +234,67 @@ class _HomeScreenState extends State<HomeScreen> {
 
           const SizedBox(height: 16),
 
-          // Books List
+          // Books List with Pull-to-Refresh
           Expanded(
-            child: booksProvider.books.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+            child: RefreshIndicator(
+              onRefresh: () async {
+                if (authProvider.user != null) {
+                  await booksProvider.loadBooks(authProvider.user!.uid, forceRefresh: true);
+                }
+              },
+              child: booksProvider.books.isEmpty
+                  ? ListView(
                       children: [
-                        Icon(
-                          Icons.library_books,
-                          size: 80,
-                          color: Colors.grey[300],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No books yet',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Add your first book to get started',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[500],
+                        SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                        Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.library_books,
+                                size: 80,
+                                color: Colors.grey[300],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No books yet',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Add your first book to get started',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Pull down to refresh',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[400],
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: booksProvider.books.length,
+                      itemBuilder: (context, index) {
+                        final book = booksProvider.books[index];
+                        return _BookCard(book: book);
+                      },
                     ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: booksProvider.books.length,
-                    itemBuilder: (context, index) {
-                      final book = booksProvider.books[index];
-                      return _BookCard(book: book);
-                    },
-                  ),
-                      ),
+            ),
+          ),
                     ],
                   ),
                 ),

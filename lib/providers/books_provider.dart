@@ -21,6 +21,8 @@ class BooksProvider with ChangeNotifier {
   String? _errorMessage;
   String _searchQuery = '';
   ReadingStatus? _statusFilter;
+  String? _currentUserId;
+  DateTime? _lastLoadTime;
 
   List<Book> get books => _filteredBooks;
   bool get isLoading => _isLoading;
@@ -29,18 +31,33 @@ class BooksProvider with ChangeNotifier {
   ReadingStatus? get statusFilter => _statusFilter;
   bool get isGeminiInitialized => _geminiService.isInitialized;
 
-  // Initialize Gemini service
-  void initializeGemini(String apiKey) {
-    _geminiService.initialize(apiKey);
+  // Initialize Gemini service with optional model selection
+  void initializeGemini(String apiKey, {String model = 'gemini-1.5-flash'}) {
+    _geminiService.initialize(apiKey, model: model);
   }
 
-  // Load books (async version for Firestore)
-  Future<void> loadBooks(String userId) async {
+  // Get current Gemini model
+  String get geminiModel => _geminiService.currentModel;
+
+  // Load books (async version for Firestore with caching)
+  Future<void> loadBooks(String userId, {bool forceRefresh = false}) async {
     try {
+      // Skip loading if already loaded for this user and not forcing refresh
+      if (!forceRefresh && _currentUserId == userId && _books.isNotEmpty) {
+        final timeSinceLastLoad = DateTime.now().difference(_lastLoadTime ?? DateTime.now());
+        // Only skip if loaded less than 30 seconds ago
+        if (timeSinceLastLoad.inSeconds < 30) {
+          print('📦 Using cached books (${_books.length} books)');
+          return;
+        }
+      }
+
       _isLoading = true;
+      _currentUserId = userId;
       notifyListeners();
 
       _books = await _databaseService.getUserBooks(userId);
+      _lastLoadTime = DateTime.now();
       _applyFilters();
 
       _isLoading = false;

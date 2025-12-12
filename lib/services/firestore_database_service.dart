@@ -5,6 +5,14 @@ import '../models/reading_status.dart';
 class FirestoreDatabaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // Enable offline persistence for better performance
+  FirestoreDatabaseService() {
+    _firestore.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
+  }
+
   // Collection reference
   CollectionReference get _booksCollection => _firestore.collection('books');
 
@@ -66,18 +74,22 @@ class FirestoreDatabaseService {
     });
   }
 
-  // Get all books for a user (one-time fetch)
-  Future<List<Book>> getUserBooks(String userId) async {
+  // Get all books for a user (one-time fetch with cache support)
+  Future<List<Book>> getUserBooks(String userId, {Source source = Source.serverAndCache}) async {
     try {
+      // First try to get from cache for faster loading
       final querySnapshot = await _booksCollection
           .where('userId', isEqualTo: userId)
           .orderBy('dateAdded', descending: true)
-          .get();
+          .get(GetOptions(source: source));
+
+      print('📚 Loaded ${querySnapshot.docs.length} books (source: ${querySnapshot.metadata.isFromCache ? "cache" : "server"})');
 
       return querySnapshot.docs.map((doc) {
         return Book.fromMap(doc.data() as Map<String, dynamic>);
       }).toList();
     } catch (e) {
+      print('❌ Failed to get books: $e');
       throw 'Failed to get books: $e';
     }
   }
