@@ -33,7 +33,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final booksProvider = Provider.of<BooksProvider>(context, listen: false);
 
     if (authProvider.user != null) {
-      await booksProvider.loadBooks(authProvider.user!.uid);
+      // Load books without blocking - UI will show loading state
+      booksProvider.loadBooks(authProvider.user!.uid).catchError((error) {
+        print('❌ Error loading books: $error');
+      });
     }
   }
 

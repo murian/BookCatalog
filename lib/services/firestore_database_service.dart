@@ -4,13 +4,22 @@ import '../models/reading_status.dart';
 
 class FirestoreDatabaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static bool _settingsConfigured = false;
 
   // Enable offline persistence for better performance
   FirestoreDatabaseService() {
-    _firestore.settings = const Settings(
-      persistenceEnabled: true,
-      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-    );
+    if (!_settingsConfigured) {
+      try {
+        _firestore.settings = const Settings(
+          persistenceEnabled: true,
+          cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+        );
+        _settingsConfigured = true;
+        print('✅ Firestore settings configured');
+      } catch (e) {
+        print('⚠️ Firestore settings already configured or failed: $e');
+      }
+    }
   }
 
   // Collection reference
