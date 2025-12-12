@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -12,8 +13,11 @@ import 'models/book.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
+  print('🚀 Starting app initialization...');
+
+  // Initialize Firebase with timeout to prevent hanging
   try {
+    print('📱 Initializing Firebase...');
     await Firebase.initializeApp(
       options: const FirebaseOptions(
         apiKey: "AIzaSyBKQHO_FgzReL6UTIJbkZv-muJmJFs02BU",
@@ -23,20 +27,28 @@ void main() async {
         messagingSenderId: "777861825903",
         appId: "1:777861825903:web:05a0cffc86cb7c4e5fd49a",
       ),
+    ).timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {
+        print('⚠️ Firebase initialization timed out after 10 seconds');
+        throw TimeoutException('Firebase initialization timed out');
+      },
     );
     print('✅ Firebase initialized successfully');
   } catch (e) {
     print('❌ Firebase initialization failed: $e');
-    print('⚠️  IMPORTANT: You need to configure Firebase credentials in lib/main.dart');
-    print('📖 See FIREBASE_SETUP.md for instructions');
+    print('⚠️  App will continue with limited functionality');
   }
 
   // Initialize Hive (kept for local caching/preferences)
+  print('💾 Initializing Hive...');
   await Hive.initFlutter();
 
   // Register Hive adapters
   Hive.registerAdapter(BookAdapter());
+  print('✅ Hive initialized successfully');
 
+  print('🎬 Launching app...');
   runApp(const MyApp());
 }
 

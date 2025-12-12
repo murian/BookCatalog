@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
 import '../services/firebase_auth_service.dart';
@@ -5,7 +6,7 @@ import '../services/firebase_auth_service.dart';
 class AuthProvider with ChangeNotifier {
   final FirebaseAuthService _authService = FirebaseAuthService();
   UserModel? _user;
-  bool _isLoading = false;
+  bool _isLoading = true; // Start with loading = true
   String? _errorMessage;
 
   UserModel? get user => _user;
@@ -14,13 +15,30 @@ class AuthProvider with ChangeNotifier {
   bool get isAuthenticated => _user != null;
 
   AuthProvider() {
+    print('🔐 AuthProvider initializing...');
     _checkCurrentUser();
   }
 
   // Check if user is already signed in
   Future<void> _checkCurrentUser() async {
-    _user = await _authService.getCurrentUser();
-    notifyListeners();
+    try {
+      print('👤 Checking current user...');
+      _user = await _authService.getCurrentUser().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          print('⚠️ getCurrentUser timed out, assuming no user');
+          return null;
+        },
+      );
+      print(_user != null ? '✅ User found: ${_user!.email}' : 'ℹ️ No user signed in');
+    } catch (e) {
+      print('❌ Error checking current user: $e');
+      _user = null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+      print('✅ AuthProvider initialization complete');
+    }
   }
 
   // Sign up with email and password
