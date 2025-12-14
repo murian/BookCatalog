@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+body {
+  background-color: #F8F9FA;
+  color: #2C3E50;
+}
+
+.gradient-primary {
+  background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+}
+
+.gradient-secondary {
+  background: linear-gradient(135deg, #43CBFF 0%, #9708CC 100%);
+}
+
+.card {
+  background-color: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: opacity 0.2s;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+.btn-secondary {
+  background-color: white;
+  color: #667EEA;
+  border: 2px solid #667EEA;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: #F9FAFB;
+}
+
+.input-field {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid #D1D5DB;
+  border-radius: 12px;
+  background-color: #F9FAFB;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.input-field:focus {
+  ring: 2px;
+  ring-color: #667EEA;
+  border-color: transparent;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.status-to-read {
+  background-color: rgba(243, 156, 18, 0.1);
+  color: #F39C12;
+}
+
+.status-reading {
+  background-color: rgba(67, 203, 255, 0.1);
+  color: #2563EB;
+}
+
+.status-finished {
+  background-color: rgba(46, 204, 113, 0.1);
+  color: #2ECC71;
+}
+
+.text-gradient {
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  background-image: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+}
