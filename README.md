@@ -1,3 +1,5 @@
+> **New: web app.** A lightweight web version lives in [`webapp/`](webapp/README.md) and is deployed to GitHub Pages. It supports online lookup, photo and barcode scanning, CSV import and Firebase sync.
+
 # Book Catalog - AI-Powered Book Management App
 
 A comprehensive Flutter application for cataloging your books with AI-powered book identification using Google Gemini, barcode scanning, and **cloud synchronization** with Firebase.
