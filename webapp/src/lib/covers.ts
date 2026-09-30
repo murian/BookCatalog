@@ -79,7 +79,7 @@ async function getJson(url: string): Promise<any> {
 /** iTunes Search doesn't always send CORS headers, so fall back to JSONP. */
 function jsonp(url: string, timeout = 8000): Promise<any> {
   return new Promise((resolve, reject) => {
-    const cb = `__shelf_jsonp_${Math.random().toString(36).slice(2)}`
+    const cb = `__exlibris_jsonp_${Math.random().toString(36).slice(2)}`
     const script = document.createElement('script')
     const cleanup = () => {
       delete (window as any)[cb]

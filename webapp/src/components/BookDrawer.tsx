@@ -78,7 +78,7 @@ export function BookDrawer({
         <div className="flex-1 overflow-y-auto px-6 pb-8">
           <div className="relative mb-6 flex flex-col items-center text-center">
             <button type="button" onClick={() => setPickingCover(true)} className="group relative" aria-label="Change cover">
-              <Cover title={book.title} author={book.author} url={book.coverImageUrl} isbn={book.isbn} className="w-36 shadow-2xl shadow-violet-500/20" />
+              <Cover title={book.title} author={book.author} url={book.coverImageUrl} isbn={book.isbn} className="w-36 shadow-2xl shadow-brand-900/20" />
               <span className="absolute inset-x-2 bottom-2 flex items-center justify-center gap-1.5 rounded-lg bg-black/60 py-1.5 text-xs font-medium text-white opacity-0 backdrop-blur transition group-hover:opacity-100 max-sm:opacity-100">
                 <ImagePlus size={13} /> Change cover
               </span>
@@ -95,7 +95,7 @@ export function BookDrawer({
                 {book.rating ? (
                   <div className="mt-2 flex gap-0.5">
                     {[1, 2, 3, 4, 5].map((n) => (
-                      <Star key={n} size={16} className={n <= book.rating! ? 'fill-amber-400 text-amber-400' : 'text-zinc-300 dark:text-zinc-700'} />
+                      <Star key={n} size={16} className={n <= book.rating! ? 'fill-brass-400 text-brass-400' : 'text-zinc-300 dark:text-zinc-700'} />
                     ))}
                   </div>
                 ) : null}
@@ -159,7 +159,7 @@ export function BookDrawer({
               {book.categories?.length ? (
                 <div className="mt-5 flex flex-wrap gap-1.5">
                   {book.categories.map((c) => (
-                    <span key={c} className="rounded-full bg-violet-500/10 px-2.5 py-1 text-xs text-violet-600 dark:text-violet-300">
+                    <span key={c} className="rounded-full bg-brass-500/15 px-2.5 py-1 text-xs text-brass-700 dark:text-brass-300">
                       {c}
                     </span>
                   ))}

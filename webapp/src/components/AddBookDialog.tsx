@@ -200,7 +200,7 @@ function PhotoPanel({ onPick }: { onPick: (m: BookMetadata) => void }) {
 
       {step && (
         <div className="mt-4 flex items-center gap-3 text-sm text-zinc-500">
-          <Loader2 size={16} className="animate-spin text-violet-500" />
+          <Loader2 size={16} className="animate-spin text-brand-600 dark:text-brass-400" />
           {step.msg}
           {step.progress != null && <span className="tabular-nums">{Math.round(step.progress * 100)}%</span>}
         </div>
@@ -216,7 +216,7 @@ function PhotoPanel({ onPick }: { onPick: (m: BookMetadata) => void }) {
           }}
         >
           <p className="mb-1.5 flex items-center gap-1.5 text-xs text-zinc-500">
-            <Sparkles size={12} className="text-violet-500" /> {via}
+            <Sparkles size={12} className="text-brand-600 dark:text-brass-400" /> {via}
           </p>
           <div className="flex gap-2">
             <input className="field" value={query} onChange={(e) => setQuery(e.target.value)} />
@@ -374,9 +374,9 @@ function CsvPanel({ userId, existing, onAdd, onDone }: { userId: string; existin
       <div className="space-y-4">
         <button
           onClick={() => fileRef.current?.click()}
-          className="flex w-full flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-zinc-900/10 px-6 py-10 transition hover:border-violet-500 hover:bg-violet-500/5 dark:border-white/10"
+          className="flex w-full flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-zinc-900/10 px-6 py-10 transition hover:border-brand-600 hover:bg-brand-700/5 dark:border-white/10"
         >
-          <FileSpreadsheet size={32} className="text-violet-500" />
+          <FileSpreadsheet size={32} className="text-brand-600 dark:text-brass-400" />
           <span className="font-medium">Choose a CSV file</span>
           <span className="max-w-md text-center text-sm text-zinc-500">
             One title per line works. Optional columns: <code>author, isbn, language, bought, started, finished, status, rating, notes</code>. Goodreads exports work too.
@@ -435,17 +435,17 @@ function CsvPanel({ userId, existing, onAdd, onDone }: { userId: string; existin
         <span>
           {finished ? `Found details for ${items.filter((i) => i.matches.length).length} of ${items.length}` : `Looking up ${done + 1} of ${items.length}…`}
         </span>
-        {!finished && <Loader2 size={16} className="animate-spin text-violet-500" />}
+        {!finished && <Loader2 size={16} className="animate-spin text-brand-600 dark:text-brass-400" />}
       </div>
       <div className="mb-4 h-1 overflow-hidden rounded-full bg-zinc-900/5 dark:bg-white/10">
-        <div className="h-full bg-gradient-to-r from-violet-500 to-pink-500 transition-all" style={{ width: `${(done / items.length) * 100}%` }} />
+        <div className="h-full bg-brand-700 transition-all" style={{ width: `${(done / items.length) * 100}%` }} />
       </div>
       <ul className="divide-y divide-zinc-900/5 dark:divide-white/5">
         {items.map((it, i) => {
           const m = it.choice >= 0 ? it.matches[it.choice] : null
           return (
             <li key={i} className={`flex items-center gap-3 py-3 ${it.include ? '' : 'opacity-50'}`}>
-              <input type="checkbox" className="size-4 accent-violet-500" checked={it.include} onChange={(e) => update(i, { include: e.target.checked })} />
+              <input type="checkbox" className="size-4 accent-brand-700" checked={it.include} onChange={(e) => update(i, { include: e.target.checked })} />
               <Cover title={m?.title ?? it.row.title ?? '?'} author={m?.author ?? it.row.author} url={m?.coverImageUrl} isbn={m?.isbn ?? it.row.isbn} className="w-10 shrink-0 rounded-md" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs text-zinc-400">

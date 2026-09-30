@@ -1,6 +1,6 @@
-import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth'
-import { Cloud, Download, FileJson, ImagePlus, KeyRound, Loader2, LogOut, Moon, Sun, Monitor, Upload } from 'lucide-react'
-import { useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { signOut, type User } from 'firebase/auth'
+import { Cloud, CloudOff, Download, FileJson, ImagePlus, KeyRound, Loader2, LogOut, Moon, Sun, Monitor, Upload } from 'lucide-react'
+import { useRef, useState, type ReactNode } from 'react'
 import { auth } from '../lib/firebase'
 import { settings } from '../lib/settings'
 import { exportCsv, exportJson } from '../lib/books'
@@ -15,15 +15,6 @@ const Section = ({ title, children }: { title: string; children: ReactNode }) =>
   </section>
 )
 
-function friendlyAuthError(code: string) {
-  if (code.includes('invalid-credential') || code.includes('wrong-password') || code.includes('user-not-found')) return 'Wrong email or password.'
-  if (code.includes('email-already-in-use')) return 'An account with this email already exists. Sign in instead.'
-  if (code.includes('weak-password')) return 'Use at least 6 characters for the password.'
-  if (code.includes('invalid-email')) return 'That email address looks invalid.'
-  if (code.includes('network')) return 'Network error. Check your connection.'
-  return code
-}
-
 export function SettingsDialog({
   user,
   books,
@@ -31,6 +22,7 @@ export function SettingsDialog({
   onTheme,
   onImport,
   onFindCovers,
+  onSignIn,
   onClose,
 }: {
   user: User | null
@@ -39,33 +31,15 @@ export function SettingsDialog({
   onTheme: (t: string) => void
   onImport: (books: Book[]) => Promise<void>
   onFindCovers: () => Promise<number | undefined>
+  onSignIn: () => void
   onClose: () => void
 }) {
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ ok?: boolean; text: string } | null>(null)
   const [gemini, setGemini] = useState(settings.get('geminiKey'))
   const [gbooks, setGbooks] = useState(settings.get('googleBooksKey'))
   const jsonRef = useRef<HTMLInputElement>(null)
   const [findingCovers, setFindingCovers] = useState(false)
   const missingCovers = books.filter((b) => !b.coverImageUrl).length
-
-  const submit = async (e: FormEvent) => {
-    e.preventDefault()
-    setBusy(true)
-    setMsg(null)
-    try {
-      if (mode === 'signin') await signInWithEmailAndPassword(auth, email, password)
-      else await createUserWithEmailAndPassword(auth, email, password)
-      onClose()
-    } catch (err) {
-      setMsg({ text: friendlyAuthError((err as { code?: string }).code ?? String(err)) })
-    } finally {
-      setBusy(false)
-    }
-  }
 
   const importJson = async (file?: File) => {
     if (!file) return
@@ -84,12 +58,17 @@ export function SettingsDialog({
       <Section title="Account & sync">
         {user ? (
           <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-pink-500 font-semibold text-white">
-              {user.email?.[0]?.toUpperCase()}
-            </div>
+            {user.photoURL ? (
+              <img src={user.photoURL} alt="" referrerPolicy="no-referrer" className="size-10 rounded-full" />
+            ) : (
+              <div className="flex size-10 items-center justify-center rounded-full bg-brand-700 font-semibold text-white">
+                {(user.displayName ?? user.email ?? '?')[0].toUpperCase()}
+              </div>
+            )}
             <div className="min-w-0 flex-1">
-              <p className="truncate font-medium">{user.email}</p>
-              <p className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+              <p className="truncate font-medium">{user.displayName ?? user.email}</p>
+              {user.displayName && <p className="truncate text-xs text-zinc-500">{user.email}</p>}
+              <p className="flex items-center gap-1 text-xs text-brand-600 dark:text-brass-300">
                 <Cloud size={12} /> Synced across your devices
               </p>
             </div>
@@ -98,45 +77,16 @@ export function SettingsDialog({
             </button>
           </div>
         ) : (
-          <form onSubmit={submit} className="space-y-3">
-            <p className="text-sm text-zinc-500">
-              Books are currently saved only in this browser. Sign in to back them up and sync across phone, tablet and computer.
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="flex flex-1 items-center gap-2 text-sm text-zinc-500">
+              <CloudOff size={16} className="shrink-0" /> Saved only in this browser.
             </p>
-            <input className="field" type="email" required autoComplete="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <input
-              className="field"
-              type="password"
-              required
-              minLength={6}
-              autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <button className="btn-primary w-full" disabled={busy}>
-              {busy && <Loader2 size={16} className="animate-spin" />} {mode === 'signin' ? 'Sign in' : 'Create account'}
+            <button className="btn-primary" onClick={onSignIn}>
+              <Cloud size={16} /> Sign in to sync
             </button>
-            <div className="flex justify-between text-sm">
-              <button type="button" className="text-violet-600 hover:underline dark:text-violet-400" onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}>
-                {mode === 'signin' ? 'Create an account' : 'I already have an account'}
-              </button>
-              {mode === 'signin' && (
-                <button
-                  type="button"
-                  className="text-zinc-500 hover:underline"
-                  onClick={async () => {
-                    if (!email) return setMsg({ text: 'Enter your email first.' })
-                    await sendPasswordResetEmail(auth, email).catch(() => {})
-                    setMsg({ ok: true, text: 'If that account exists, a reset link is on its way.' })
-                  }}
-                >
-                  Forgot password?
-                </button>
-              )}
-            </div>
-          </form>
+          </div>
         )}
-        {msg && <p className={`mt-3 text-sm ${msg.ok ? 'text-emerald-600' : 'text-rose-500'}`}>{msg.text}</p>}
+        {msg && <p className={`mt-3 text-sm ${msg.ok ? 'text-brand-600' : 'text-rose-600'}`}>{msg.text}</p>}
       </Section>
 
       <Section title="Appearance">
@@ -162,7 +112,7 @@ export function SettingsDialog({
       <Section title="Smarter photo recognition (optional)">
         <p className="mb-3 text-sm text-zinc-500">
           Barcodes and cover text are read on your device for free. For better cover recognition, add a free{' '}
-          <a className="text-violet-600 underline dark:text-violet-400" href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">
+          <a className="text-brand-700 underline dark:text-brass-300" href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">
             Gemini API key
           </a>
           . It's stored only in this browser.

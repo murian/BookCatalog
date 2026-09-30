@@ -72,7 +72,7 @@ export function PersonalForm({ value, onChange }: { value: PersonalFields; onCha
           <label className="mb-1.5 flex cursor-pointer items-center gap-1.5 text-xs text-zinc-500">
             <input
               type="checkbox"
-              className="accent-violet-500"
+              className="accent-brand-700"
               checked={!!value.purchaseDateUnknown}
               onChange={(e) => onChange({ ...value, purchaseDateUnknown: e.target.checked, purchaseDate: e.target.checked ? null : value.purchaseDate })}
             />
@@ -116,7 +116,7 @@ export function PersonalForm({ value, onChange }: { value: PersonalFields; onCha
               onClick={() => set('rating', value.rating === n ? null : n)}
               className="rounded-lg p-1 transition hover:scale-110"
             >
-              <Star size={22} className={n <= (value.rating ?? 0) ? 'fill-amber-400 text-amber-400' : 'text-zinc-300 dark:text-zinc-600'} />
+              <Star size={22} className={n <= (value.rating ?? 0) ? 'fill-brass-400 text-brass-400' : 'text-zinc-300 dark:text-zinc-600'} />
             </button>
           ))}
         </div>

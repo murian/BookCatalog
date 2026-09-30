@@ -1,4 +1,4 @@
-# Shelf: book catalog
+# Ex Libris: book catalog
 
 A fast web app to catalog your books. It runs entirely in the browser and is hosted on GitHub Pages.
 
@@ -39,8 +39,8 @@ npm run build
 
 ```bash
 cd webapp
-docker build -t shelf .
-docker run -d -p 8080:80 --name shelf shelf
+docker build -t exlibris .
+docker run -d -p 8080:80 --name exlibris exlibris
 ```
 
 Open http://localhost:8080. The image builds the app (running the tests first) and serves it with nginx. To update after pulling changes, rebuild the image and recreate the container.
@@ -55,7 +55,11 @@ One-time setup in the GitHub repo: **Settings → Pages → Build and deployment
 
 It uses the existing `books-4012e` Firebase project and its `books` collection, so books saved by the earlier Flutter app show up too. To use another project, set `VITE_FIREBASE_*` variables (see `webapp/src/lib/firebase.ts`).
 
-In the Firebase console, **Email/Password** sign-in must be enabled. Firestore rules must limit each user to their own books. **Replace** any older rules that check `request.resource` on reads, since those block listing books. Use:
+In the Firebase console:
+
+1. **Authentication → Sign-in method**: enable **Google** and **Email/Password**.
+2. **Authentication → Settings → Authorized domains**: add `murian.github.io`.
+3. **Project settings → General → Public-facing name**: set it to `Ex Libris` and choose a support email. Google's account picker and Firebase's emails (such as password reset) show this name instead of the project ID. Firestore rules must limit each user to their own books. **Replace** any older rules that check `request.resource` on reads, since those block listing books. Use:
 
 ```
 rules_version = '2';
