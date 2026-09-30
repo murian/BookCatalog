@@ -1,5 +1,9 @@
 import { X } from 'lucide-react'
 import { useEffect, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
+
+// Open modals, newest last: Escape only closes the one on top.
+const stack: symbol[] = []
 
 export function Modal({
   title,
@@ -13,16 +17,19 @@ export function Modal({
   wide?: boolean
 }) {
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    const id = Symbol()
+    stack.push(id)
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && stack.at(-1) === id && onClose()
     window.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
     return () => {
+      stack.splice(stack.indexOf(id), 1)
       window.removeEventListener('keydown', onKey)
-      document.body.style.overflow = ''
+      if (!stack.length) document.body.style.overflow = ''
     }
   }, [onClose])
 
-  return (
+  return createPortal(
     <div className="animate-fade fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center sm:p-6" onMouseDown={onClose}>
       <div
         role="dialog"
@@ -40,6 +47,7 @@ export function Modal({
         </div>
         <div className="overflow-y-auto px-6 pb-6">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

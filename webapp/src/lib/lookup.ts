@@ -159,9 +159,6 @@ export async function searchBooks(q: LookupQuery, max = 8): Promise<BookMetadata
   return merged.slice(0, max)
 }
 
-export function fallbackCover(isbn?: string | null) {
-  return isbn ? `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg?default=false` : null
-}
 
 const COMMON = ['en', 'pt', 'es', 'fr', 'de', 'it', 'ja', 'zh', 'ru', 'nl', 'sv', 'pl', 'ko', 'ar', 'he', 'el', 'tr', 'ca', 'la']
 

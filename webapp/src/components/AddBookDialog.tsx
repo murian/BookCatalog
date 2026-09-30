@@ -4,6 +4,7 @@ import type { Book, BookMetadata, PersonalFields } from '../types'
 import { Modal } from './Modal'
 import { Cover } from './Cover'
 import { PersonalForm } from './PersonalForm'
+import { CoverPicker } from './CoverPicker'
 import { searchBooks, languageName } from '../lib/lookup'
 import { identifyFromPhoto } from '../lib/photo'
 import { parseCsvText, CSV_TEMPLATE, type CsvRow } from '../lib/csv'
@@ -246,6 +247,7 @@ function ConfirmStep({
   const [p, setP] = useState<PersonalFields>({ ...defaultPersonal(), language: meta.language ?? null })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [pickingCover, setPickingCover] = useState(false)
   const manual = meta.source === 'Manual'
 
   return (
@@ -262,7 +264,12 @@ function ConfirmStep({
       }}
     >
       <div className="mb-5 flex gap-4">
-        <Cover title={m.title || 'New book'} author={m.author} url={m.coverImageUrl} isbn={m.isbn} className="w-24 shrink-0" />
+        <button type="button" onClick={() => m.title.trim() && setPickingCover(true)} className="group relative w-24 shrink-0" aria-label="Choose cover">
+          <Cover title={m.title || 'New book'} author={m.author} url={m.coverImageUrl} isbn={m.isbn} />
+          <span className="absolute inset-x-1 bottom-1 rounded-md bg-black/60 py-1 text-center text-[10px] font-medium text-white opacity-0 transition group-hover:opacity-100 max-sm:opacity-100">
+            Change cover
+          </span>
+        </button>
         <div className="min-w-0 flex-1 space-y-2">
           <input className="field font-medium" required placeholder="Title" value={m.title} onChange={(e) => setM({ ...m, title: e.target.value })} autoFocus={manual} />
           <input className="field" placeholder="Author" value={m.author ?? ''} onChange={(e) => setM({ ...m, author: e.target.value })} />
@@ -293,6 +300,17 @@ function ConfirmStep({
           {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Add to shelf
         </button>
       </div>
+      {pickingCover && (
+        <CoverPicker
+          query={{ title: m.title, author: m.author, isbn: m.isbn, language: p.language ?? m.language }}
+          current={m.coverImageUrl}
+          onClose={() => setPickingCover(false)}
+          onPick={(url) => {
+            setM({ ...m, coverImageUrl: url })
+            setPickingCover(false)
+          }}
+        />
+      )}
     </form>
   )
 }

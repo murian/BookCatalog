@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { fallbackCover } from '../lib/lookup'
+import { useEffect, useState } from 'react'
+import { isbnCovers } from '../lib/covers'
 
 const GRADIENTS = [
   'from-violet-500 to-fuchsia-500',
@@ -30,8 +30,9 @@ export function Cover({
   isbn?: string | null
   className?: string
 }) {
-  const candidates = [url, fallbackCover(isbn)].filter(Boolean) as string[]
+  const candidates = [url, ...isbnCovers(isbn).map((c) => c.url)].filter(Boolean) as string[]
   const [idx, setIdx] = useState(0)
+  useEffect(() => setIdx(0), [url, isbn])
   const src = candidates[idx]
 
   return (
@@ -42,8 +43,8 @@ export function Cover({
           alt={title}
           loading="lazy"
           className="h-full w-full object-cover"
-          // Open Library returns a 1x1 pixel instead of 404 for some misses.
-          onLoad={(e) => e.currentTarget.naturalWidth < 10 && setIdx((i) => i + 1)}
+          // Open Library and Amazon return a tiny placeholder instead of 404 for misses.
+          onLoad={(e) => e.currentTarget.naturalWidth < 50 && setIdx((i) => i + 1)}
           onError={() => setIdx((i) => i + 1)}
         />
       ) : (

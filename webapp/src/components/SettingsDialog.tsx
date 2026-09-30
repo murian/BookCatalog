@@ -1,5 +1,5 @@
 import { createUserWithEmailAndPassword, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth'
-import { Cloud, Download, FileJson, KeyRound, Loader2, LogOut, Moon, Sun, Monitor, Upload } from 'lucide-react'
+import { Cloud, Download, FileJson, ImagePlus, KeyRound, Loader2, LogOut, Moon, Sun, Monitor, Upload } from 'lucide-react'
 import { useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { auth } from '../lib/firebase'
 import { settings } from '../lib/settings'
@@ -30,6 +30,7 @@ export function SettingsDialog({
   theme,
   onTheme,
   onImport,
+  onFindCovers,
   onClose,
 }: {
   user: User | null
@@ -37,6 +38,7 @@ export function SettingsDialog({
   theme: string
   onTheme: (t: string) => void
   onImport: (books: Book[]) => Promise<void>
+  onFindCovers: () => Promise<number | undefined>
   onClose: () => void
 }) {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin')
@@ -47,6 +49,8 @@ export function SettingsDialog({
   const [gemini, setGemini] = useState(settings.get('geminiKey'))
   const [gbooks, setGbooks] = useState(settings.get('googleBooksKey'))
   const jsonRef = useRef<HTMLInputElement>(null)
+  const [findingCovers, setFindingCovers] = useState(false)
+  const missingCovers = books.filter((b) => !b.coverImageUrl).length
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -197,6 +201,19 @@ export function SettingsDialog({
         </div>
         <input ref={jsonRef} type="file" accept=".json,application/json" hidden onChange={(e) => importJson(e.target.files?.[0])} />
         <p className="mt-2 text-xs text-zinc-400">To import a list of titles, use Add book → CSV.</p>
+        <button
+          className="btn-soft mt-3 w-full"
+          disabled={!missingCovers || findingCovers}
+          onClick={async () => {
+            setFindingCovers(true)
+            const n = await onFindCovers()
+            setFindingCovers(false)
+            setMsg({ ok: true, text: n ? `Found ${n} of ${missingCovers} missing covers.` : 'No new covers found. Try the book’s Change cover option.' })
+          }}
+        >
+          {findingCovers ? <Loader2 size={16} className="animate-spin" /> : <ImagePlus size={16} />}
+          {missingCovers ? `Find covers for ${missingCovers} book${missingCovers === 1 ? '' : 's'} without one` : 'Every book has a cover'}
+        </button>
       </Section>
     </Modal>
   )
