@@ -91,8 +91,11 @@ function ResultList({ results, onPick }: { results: BookMetadata[]; onPick: (m: 
             <div className="min-w-0 flex-1">
               <p className="line-clamp-2 font-medium">{r.title}</p>
               <p className="truncate text-sm text-zinc-500">{r.author ?? 'Unknown author'}</p>
-              <p className="mt-0.5 truncate text-xs text-zinc-400">
-                {[r.publishedDate?.slice(0, 4), languageName(r.language), r.pageCount && `${r.pageCount} pages`, r.source].filter(Boolean).join(' · ')}
+              <p className="mt-1 flex items-center gap-2 text-xs text-zinc-400">
+                <span className="shrink-0 rounded-full bg-brand-700/10 px-2 py-0.5 font-medium text-brand-700 dark:bg-brand-400/15 dark:text-brand-200">{r.source}</span>
+                <span className="truncate">
+                  {[r.publishedDate?.slice(0, 4), languageName(r.language), r.pageCount && `${r.pageCount} pages`].filter(Boolean).join(' · ')}
+                </span>
               </p>
             </div>
           </button>
@@ -135,7 +138,7 @@ function SearchPanel({ onPick }: { onPick: (m: BookMetadata) => void }) {
           {loading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
         </button>
       </form>
-      <p className="mt-2 text-xs text-zinc-400">Searches Google Books and Open Library.</p>
+      <p className="mt-2 text-xs text-zinc-400">Searches Google Books, Open Library, Apple Books and Wikidata, plus the Brazilian ISBN registry for ISBNs.</p>
       {error && <p className="mt-4 text-sm text-rose-500">{error}</p>}
       {results && <div className="mt-4">{results.length ? <ResultList results={results} onPick={onPick} /> : <Empty />}</div>}
     </div>

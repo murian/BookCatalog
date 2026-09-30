@@ -1,5 +1,6 @@
 import { cleanIsbn } from './lookup'
 import { settings } from './settings'
+import { fetchJson, fetchJsonOrJsonp } from './http'
 
 export interface CoverCandidate {
   url: string
@@ -70,29 +71,7 @@ export function parseWikipedia(json: any): CoverCandidate[] {
     .map((url) => ({ url, source: 'Wikipedia' }))
 }
 
-async function getJson(url: string): Promise<any> {
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`${new URL(url).host} responded ${res.status}`)
-  return res.json()
-}
-
-/** iTunes Search doesn't always send CORS headers, so fall back to JSONP. */
-function jsonp(url: string, timeout = 8000): Promise<any> {
-  return new Promise((resolve, reject) => {
-    const cb = `__exlibris_jsonp_${Math.random().toString(36).slice(2)}`
-    const script = document.createElement('script')
-    const cleanup = () => {
-      delete (window as any)[cb]
-      script.remove()
-      clearTimeout(timer)
-    }
-    const timer = setTimeout(() => (cleanup(), reject(new Error('timeout'))), timeout)
-    ;(window as any)[cb] = (data: any) => (cleanup(), resolve(data))
-    script.onerror = () => (cleanup(), reject(new Error('script error')))
-    script.src = `${url}&callback=${cb}`
-    document.head.appendChild(script)
-  })
-}
+const getJson = (url: string) => fetchJson(url, 1)
 
 const q = (s: string) => encodeURIComponent(s)
 
@@ -124,7 +103,7 @@ async function fromOpenLibrary(c: CoverQuery): Promise<CoverCandidate[]> {
 async function fromApple(c: CoverQuery): Promise<CoverCandidate[]> {
   const term = [c.title, c.author].filter(Boolean).join(' ')
   const url = `https://itunes.apple.com/search?term=${q(term)}&media=ebook&limit=8`
-  const data = await getJson(url).catch(() => jsonp(url))
+  const data = await fetchJsonOrJsonp(url)
   return parseItunes(data.results)
 }
 

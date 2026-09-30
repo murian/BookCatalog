@@ -4,7 +4,7 @@ A fast web app to catalog your books. It runs entirely in the browser and is hos
 
 ## Features
 
-- **Look up any book online** from Google Books and Open Library (no API key needed). Results from both are merged, so you get covers, page counts, publisher, language, categories and descriptions.
+- **Look up any book online** from five free sources, searched at once and merged: Google Books, Open Library, Apple Books (strong on Portuguese and non-English titles), Wikidata (classics: original language, author and first publication), and, for ISBNs, the Brazilian ISBN registry via BrasilAPI. Each result is labelled with its source.
 - **Add from a photo**: snap the barcode on the back for an exact ISBN match, or photograph the cover. Cover text is read on-device with OCR. You can add an optional Gemini API key in Settings for smarter AI recognition.
 - **Find covers anywhere**: books without a cover get one automatically. Tap any cover and choose **Change cover** to pick from Google Books (all editions), Open Library, Apple Books, Amazon and Wikipedia. You can also search the web, paste an image link, or use your own photo. Settings has a button to find covers for every book that's missing one.
 - **Language guessing**: when the online lookup doesn't give a book's language, it's guessed from the description (reliable) or from accents and common words in the title (e.g. "Grande Sertão" → Portuguese). Titles too short to tell, like "Dune", are left blank. Settings can fill in the language for books that don't have one.

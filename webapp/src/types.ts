@@ -41,7 +41,9 @@ export interface Book {
 export type BookMetadata = Pick<
   Book,
   'title' | 'author' | 'isbn' | 'publisher' | 'publishedDate' | 'description' | 'coverImageUrl' | 'pageCount' | 'categories' | 'language'
-> & { source: 'Google Books' | 'Open Library' | 'Manual'; sourceId?: string }
+> & { source: BookSource; sourceId?: string }
+
+export type BookSource = 'Google Books' | 'Open Library' | 'Apple Books' | 'Wikidata' | 'ISBN Brasil' | 'Manual'
 
 export type PersonalFields = Pick<
   Book,
