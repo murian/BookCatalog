@@ -1,5 +1,5 @@
 import { signOut, type User } from 'firebase/auth'
-import { Cloud, CloudOff, Download, FileJson, ImagePlus, KeyRound, Loader2, LogOut, Moon, Sun, Monitor, Upload } from 'lucide-react'
+import { Cloud, CloudOff, Download, FileJson, ImagePlus, Languages, KeyRound, Loader2, LogOut, Moon, Sun, Monitor, Upload } from 'lucide-react'
 import { useRef, useState, type ReactNode } from 'react'
 import { auth } from '../lib/firebase'
 import { settings } from '../lib/settings'
@@ -22,6 +22,7 @@ export function SettingsDialog({
   onTheme,
   onImport,
   onFindCovers,
+  onGuessLanguages,
   onSignIn,
   onClose,
 }: {
@@ -31,6 +32,7 @@ export function SettingsDialog({
   onTheme: (t: string) => void
   onImport: (books: Book[]) => Promise<void>
   onFindCovers: () => Promise<number | undefined>
+  onGuessLanguages: () => Promise<number>
   onSignIn: () => void
   onClose: () => void
 }) {
@@ -40,6 +42,7 @@ export function SettingsDialog({
   const jsonRef = useRef<HTMLInputElement>(null)
   const [findingCovers, setFindingCovers] = useState(false)
   const missingCovers = books.filter((b) => !b.coverImageUrl).length
+  const missingLanguages = books.filter((b) => !b.language).length
 
   const importJson = async (file?: File) => {
     if (!file) return
@@ -163,6 +166,21 @@ export function SettingsDialog({
         >
           {findingCovers ? <Loader2 size={16} className="animate-spin" /> : <ImagePlus size={16} />}
           {missingCovers ? `Find covers for ${missingCovers} book${missingCovers === 1 ? '' : 's'} without one` : 'Every book has a cover'}
+        </button>
+        <button
+          className="btn-soft mt-2 w-full"
+          disabled={!missingLanguages}
+          onClick={async () => {
+            const n = await onGuessLanguages()
+            setMsg(
+              n
+                ? { ok: true, text: `Set the language for ${n} of ${missingLanguages} books. Titles too short to tell were left blank.` }
+                : { text: 'Couldn’t tell the language from those titles. You can set it on each book.' },
+            )
+          }}
+        >
+          <Languages size={16} />
+          {missingLanguages ? `Guess the language of ${missingLanguages} book${missingLanguages === 1 ? '' : 's'} without one` : 'Every book has a language'}
         </button>
       </Section>
     </Modal>
