@@ -57,7 +57,7 @@ export function CoverPicker({
       <div className="mt-5 min-h-40">
         {!results ? (
           <div className="flex items-center justify-center gap-2 py-12 text-sm text-zinc-500">
-            <Loader2 size={16} className="animate-spin text-violet-500" /> Searching for covers…
+            <Loader2 size={16} className="animate-spin text-brand-600 dark:text-brass-400" /> Searching for covers…
           </div>
         ) : visible.length === 0 ? (
           <p className="py-10 text-center text-sm text-zinc-500">No covers found. Try a shorter title, search the web, or upload a photo.</p>
@@ -68,8 +68,8 @@ export function CoverPicker({
                 key={r.url}
                 type="button"
                 onClick={() => onPick(r.url)}
-                className={`group relative overflow-hidden rounded-xl bg-zinc-100 text-left ring-2 transition hover:-translate-y-0.5 hover:ring-violet-500 dark:bg-zinc-800 ${
-                  r.url === current ? 'ring-violet-500' : 'ring-transparent'
+                className={`group relative overflow-hidden rounded-xl bg-zinc-100 text-left ring-2 transition hover:-translate-y-0.5 hover:ring-brand-600 dark:bg-zinc-800 ${
+                  r.url === current ? 'ring-brand-600' : 'ring-transparent'
                 }`}
               >
                 <img
@@ -85,7 +85,7 @@ export function CoverPicker({
                   {r.source}
                 </span>
                 {r.url === current && (
-                  <span className="absolute top-1.5 right-1.5 rounded-full bg-violet-500 p-1 text-white">
+                  <span className="absolute top-1.5 right-1.5 rounded-full bg-brand-600 p-1 text-white">
                     <Check size={12} />
                   </span>
                 )}

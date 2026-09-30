@@ -1,4 +1,4 @@
-import { BookMarked, Camera, FileSpreadsheet, LayoutGrid, List, Plus, Search, Settings, Star, CloudOff, X } from 'lucide-react'
+import { Camera, Cloud, FileSpreadsheet, LayoutGrid, List, Plus, Search, Settings, Star, CloudOff, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Book, ReadingStatus } from './types'
 import { STATUS_LABEL } from './types'
@@ -9,9 +9,11 @@ import { languageName } from './lib/lookup'
 import { settings } from './lib/settings'
 import { autoCover } from './lib/covers'
 import { Cover } from './components/Cover'
+import { Logo } from './components/Logo'
 import { AddBookDialog } from './components/AddBookDialog'
 import { BookDrawer } from './components/BookDrawer'
 import { SettingsDialog } from './components/SettingsDialog'
+import { SignInDialog } from './components/SignInDialog'
 import { StatusBadge } from './components/StatusBadge'
 
 type Filter = 'all' | ReadingStatus
@@ -42,6 +44,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [adding, setAdding] = useState<AddTab | null>(null)
   const [showSettings, setShowSettings] = useState(false)
+  const [showSignIn, setShowSignIn] = useState(false)
   const [toast, setToast] = useState('')
   const [localLeftovers, setLocalLeftovers] = useState(0)
 
@@ -128,10 +131,10 @@ export default function App() {
       <header className="glass sticky top-0 z-30 border-x-0 border-t-0">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-pink-500 text-white shadow-lg shadow-violet-500/30">
-              <BookMarked size={18} />
-            </div>
-            <span className="font-display hidden text-xl font-semibold sm:block">Shelf</span>
+            <Logo className="size-9 shrink-0 drop-shadow-sm" />
+            <span className="font-display hidden text-xl font-semibold tracking-tight sm:block">
+              Ex <span className="text-brand-700 italic dark:text-brass-300">Libris</span>
+            </span>
           </div>
           <div className="relative mx-auto max-w-md flex-1">
             <Search size={16} className="absolute top-1/2 left-3.5 -translate-y-1/2 text-zinc-400" />
@@ -145,10 +148,22 @@ export default function App() {
           <button className="btn-primary hidden sm:inline-flex" onClick={() => setAdding('search')}>
             <Plus size={16} /> Add book
           </button>
-          <button className="btn-ghost relative p-2.5" onClick={() => setShowSettings(true)} aria-label="Settings">
+          {user === null && (
+            <button className="btn-soft hidden md:inline-flex" onClick={() => setShowSignIn(true)}>
+              <Cloud size={16} /> Sign in to sync
+            </button>
+          )}
+          <button className="btn-ghost relative p-2" onClick={() => setShowSettings(true)} aria-label={user ? 'Account and settings' : 'Settings'}>
             {user ? (
-              <span className="flex size-6 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-pink-500 text-xs font-semibold text-white">
-                {user.email?.[0]?.toUpperCase()}
+              <span className="relative block">
+                {user.photoURL ? (
+                  <img src={user.photoURL} alt="" referrerPolicy="no-referrer" className="size-7 rounded-full" />
+                ) : (
+                  <span className="flex size-7 items-center justify-center rounded-full bg-brand-700 text-xs font-semibold text-white">
+                    {(user.displayName ?? user.email ?? '?')[0].toUpperCase()}
+                  </span>
+                )}
+                <span className="absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full border-2 border-white bg-brand-500 dark:border-zinc-900" title="Synced" />
               </span>
             ) : (
               <Settings size={20} />
@@ -159,15 +174,18 @@ export default function App() {
 
       <main className="mx-auto max-w-7xl px-4 sm:px-6">
         {user === null && books?.length ? (
-          <button
-            onClick={() => setShowSettings(true)}
-            className="mt-4 flex w-full items-center gap-3 rounded-2xl bg-amber-500/10 px-4 py-3 text-left text-sm text-amber-700 dark:text-amber-300"
-          >
-            <CloudOff size={16} className="shrink-0" /> Saved only in this browser. Sign in to back up and sync across devices.
-          </button>
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-brass-500/25 bg-brass-500/10 px-4 py-3 text-sm text-brass-700 dark:text-brass-300">
+            <CloudOff size={16} className="shrink-0" />
+            <span className="flex-1">
+              Saved only in this browser.<span className="hidden sm:inline"> Sign in to back up your books and sync across devices.</span>
+            </span>
+            <button className="btn-primary py-1.5" onClick={() => setShowSignIn(true)}>
+              Sign in to sync
+            </button>
+          </div>
         ) : null}
         {localLeftovers > 0 && (
-          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl bg-violet-500/10 px-4 py-3 text-sm">
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl bg-brand-700/10 px-4 py-3 text-sm">
             <span className="flex-1">You have {localLeftovers} books saved in this browser from before you signed in.</span>
             <button className="btn-primary py-1.5" onClick={moveLocalToCloud}>
               Move to my account
@@ -177,7 +195,7 @@ export default function App() {
 
         {/* Hero */}
         <section className="pt-8 pb-6 sm:pt-12">
-          <p className="text-sm font-medium text-violet-600 dark:text-violet-400">{greeting}</p>
+          <p className="text-sm font-medium text-brand-700 dark:text-brass-300">{greeting}</p>
           <h1 className="font-display mt-1 text-3xl font-semibold tracking-tight sm:text-5xl">Your library</h1>
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
@@ -207,7 +225,7 @@ export default function App() {
                     <div className="min-w-0">
                       <p className="line-clamp-2 font-medium">{b.title}</p>
                       <p className="truncate text-sm text-zinc-500">{b.author}</p>
-                      {days !== null && <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">{days === 0 ? 'Started today' : `Day ${days + 1}`}</p>}
+                      {days !== null && <p className="mt-1 text-xs font-medium text-brass-600 dark:text-brass-300">{days === 0 ? 'Started today' : `Day ${days + 1}`}</p>}
                     </div>
                   </button>
                 )
@@ -280,7 +298,7 @@ export default function App() {
               {visible.map((b, i) => (
                 <button key={b.id} onClick={() => setSelectedId(b.id)} className="group animate-rise text-left" style={{ animationDelay: `${Math.min(i, 24) * 20}ms` }}>
                   <div className="relative transition duration-300 group-hover:-translate-y-1.5 group-hover:rotate-[-0.5deg]">
-                    <Cover title={b.title} author={b.author} url={b.coverImageUrl} isbn={b.isbn} className="group-hover:shadow-xl group-hover:shadow-violet-500/20" />
+                    <Cover title={b.title} author={b.author} url={b.coverImageUrl} isbn={b.isbn} className="group-hover:shadow-xl group-hover:shadow-brand-900/20" />
                   </div>
                   <p className="mt-3 line-clamp-2 text-sm leading-snug font-medium">{b.title}</p>
                   <p className="truncate text-xs text-zinc-500">{b.author}</p>
@@ -288,7 +306,7 @@ export default function App() {
                     <p className="mt-1.5 flex items-center gap-2 text-xs">
                       {b.status !== 'toRead' && <StatusBadge status={b.status} />}
                       {b.rating ? (
-                        <span className="flex items-center gap-0.5 text-amber-500">
+                        <span className="flex items-center gap-0.5 text-brass-500">
                           <Star size={11} className="fill-current" /> {b.rating}
                         </span>
                       ) : null}
@@ -347,7 +365,7 @@ export default function App() {
           <Camera size={20} />
         </button>
         <button
-          className="flex size-14 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-pink-500 text-white shadow-xl shadow-violet-500/40"
+          className="flex size-14 items-center justify-center rounded-full bg-brand-700 text-white shadow-xl shadow-brand-900/30"
           onClick={() => setAdding('search')}
           aria-label="Add book"
         >
@@ -377,6 +395,7 @@ export default function App() {
           }}
         />
       )}
+      {showSignIn && <SignInDialog hasLocalBooks={!user && all.length > 0} onClose={() => setShowSignIn(false)} />}
       {showSettings && (
         <SettingsDialog
           user={user ?? null}
@@ -387,6 +406,10 @@ export default function App() {
             await store?.saveMany(list.map((b) => ({ ...b, userId })))
           }}
           onFindCovers={() => fillCovers(all.filter((b) => !b.coverImageUrl))}
+          onSignIn={() => {
+            setShowSettings(false)
+            setShowSignIn(true)
+          }}
           onClose={() => setShowSettings(false)}
         />
       )}
@@ -402,12 +425,12 @@ function EmptyState({ onAdd }: { onAdd: (t: AddTab) => void }) {
   ]
   return (
     <div className="py-10 text-center">
-      <h2 className="font-display text-2xl font-semibold">Start your shelf</h2>
+      <h2 className="font-display text-2xl font-semibold">Start your library</h2>
       <p className="mt-2 text-zinc-500">Add your first book. Details and covers are fetched automatically.</p>
       <div className="mx-auto mt-8 grid max-w-3xl gap-3 sm:grid-cols-3">
         {options.map(({ tab, icon: Icon, title, text }, i) => (
           <button key={tab} onClick={() => onAdd(tab)} className="glass animate-rise group rounded-3xl p-6 text-left transition hover:-translate-y-1" style={{ animationDelay: `${i * 60}ms` }}>
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-pink-500 text-white shadow-lg shadow-violet-500/30 transition group-hover:scale-110">
+            <div className="flex size-11 items-center justify-center rounded-2xl bg-brand-700 text-white shadow-lg shadow-brand-900/25 transition group-hover:scale-110">
               <Icon size={20} />
             </div>
             <p className="mt-4 font-semibold">{title}</p>
