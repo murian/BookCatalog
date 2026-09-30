@@ -34,6 +34,16 @@ npm test
 npm run build
 ```
 
+## Run in a container
+
+```bash
+cd webapp
+docker build -t shelf .
+docker run -d -p 8080:80 --name shelf shelf
+```
+
+Open http://localhost:8080. The image builds the app (running the tests first) and serves it with nginx. To update after pulling changes, rebuild the image and recreate the container.
+
 ## Deployment
 
 `.github/workflows/deploy-webapp.yml` builds and publishes to GitHub Pages on every push that touches `webapp/`.
