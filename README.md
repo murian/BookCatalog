@@ -6,6 +6,7 @@ A fast web app to catalog your books. It runs entirely in the browser and is hos
 
 - **Look up any book online** from Google Books and Open Library (no API key needed). Results from both are merged, so you get covers, page counts, publisher, language, categories and descriptions.
 - **Add from a photo**: snap the barcode on the back for an exact ISBN match, or photograph the cover. Cover text is read on-device with OCR. You can add an optional Gemini API key in Settings for smarter AI recognition.
+- **Find covers anywhere**: books without a cover get one automatically. Tap any cover and choose **Change cover** to pick from Google Books (all editions), Open Library, Apple Books, Amazon and Wikipedia. You can also search the web, paste an image link, or use your own photo. Settings has a button to find covers for every book that's missing one.
 - **Import a CSV** with many titles. Each row is looked up online, and you can review and pick the right edition before adding. Duplicates are detected. Goodreads exports work, and so do Portuguese and Spanish column names.
 - **Your reading data**: bought on (or "I don't remember"), language, format, started, finished, status (to read, reading, finished, abandoned), rating, and notes.
 - **Cloud sync** with Firebase (email and password). Without signing in, books are kept in the browser.

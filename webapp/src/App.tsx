@@ -7,6 +7,7 @@ import { clearLocalBooks, cloudStore, localStore, readLocalBooks, type BookStore
 import { formatDate, sortBooks, stats, type SortKey } from './lib/books'
 import { languageName } from './lib/lookup'
 import { settings } from './lib/settings'
+import { autoCover } from './lib/covers'
 import { Cover } from './components/Cover'
 import { AddBookDialog } from './components/AddBookDialog'
 import { BookDrawer } from './components/BookDrawer'
@@ -65,8 +66,31 @@ export default function App() {
 
   const addBooks = async (list: Book[]) => {
     if (!store) return
-    await store.saveMany(list.map((b) => ({ ...b, userId })))
+    const saved = list.map((b) => ({ ...b, userId }))
+    await store.saveMany(saved)
     notify(list.length === 1 ? `Added “${list[0].title}”` : `Added ${list.length} books`)
+    // Look for covers in the background for anything the lookup couldn't illustrate.
+    fillCovers(saved.filter((b) => !b.coverImageUrl), false)
+  }
+
+  /** Searches the web for covers of books that have none and saves the first one that loads. */
+  const fillCovers = async (list: Book[], announce = true) => {
+    if (!store || !list.length) return 0
+    let found = 0
+    let next = 0
+    const worker = async () => {
+      while (next < list.length) {
+        const b = list[next++]
+        const url = await autoCover({ title: b.title, author: b.author, isbn: b.isbn, language: b.language }).catch(() => null)
+        if (url) {
+          found++
+          await store.save({ ...b, coverImageUrl: url })
+        }
+      }
+    }
+    await Promise.all([worker(), worker()])
+    if (announce) notify(found ? `Found covers for ${found} of ${list.length} books` : 'No new covers found')
+    return found
   }
 
   const moveLocalToCloud = async () => {
@@ -362,6 +386,7 @@ export default function App() {
           onImport={async (list) => {
             await store?.saveMany(list.map((b) => ({ ...b, userId })))
           }}
+          onFindCovers={() => fillCovers(all.filter((b) => !b.coverImageUrl))}
           onClose={() => setShowSettings(false)}
         />
       )}

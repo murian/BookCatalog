@@ -1,4 +1,4 @@
-import { BookOpen, Calendar, Pencil, ShoppingBag, Star, Trash2, X, Check, Loader2, Timer } from 'lucide-react'
+import { BookOpen, Calendar, Pencil, ShoppingBag, Star, Trash2, X, Check, Loader2, Timer, ImagePlus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { Book, PersonalFields } from '../types'
 import { STATUS_LABEL } from '../types'
@@ -7,6 +7,7 @@ import { PersonalForm } from './PersonalForm'
 import { formatDate, readingDays } from '../lib/books'
 import { languageName } from '../lib/lookup'
 import { StatusBadge } from './StatusBadge'
+import { CoverPicker } from './CoverPicker'
 
 export function BookDrawer({
   book,
@@ -22,6 +23,7 @@ export function BookDrawer({
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(book)
   const [busy, setBusy] = useState(false)
+  const [pickingCover, setPickingCover] = useState(false)
 
   useEffect(() => {
     setDraft(book)
@@ -29,10 +31,11 @@ export function BookDrawer({
   }, [book])
 
   useEffect(() => {
+    if (pickingCover) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [onClose, pickingCover])
 
   const save = async () => {
     setBusy(true)
@@ -74,12 +77,16 @@ export function BookDrawer({
 
         <div className="flex-1 overflow-y-auto px-6 pb-8">
           <div className="relative mb-6 flex flex-col items-center text-center">
-            <Cover title={book.title} author={book.author} url={book.coverImageUrl} isbn={book.isbn} className="w-36 shadow-2xl shadow-violet-500/20" />
+            <button type="button" onClick={() => setPickingCover(true)} className="group relative" aria-label="Change cover">
+              <Cover title={book.title} author={book.author} url={book.coverImageUrl} isbn={book.isbn} className="w-36 shadow-2xl shadow-violet-500/20" />
+              <span className="absolute inset-x-2 bottom-2 flex items-center justify-center gap-1.5 rounded-lg bg-black/60 py-1.5 text-xs font-medium text-white opacity-0 backdrop-blur transition group-hover:opacity-100 max-sm:opacity-100">
+                <ImagePlus size={13} /> Change cover
+              </span>
+            </button>
             {editing ? (
               <div className="mt-5 w-full space-y-2 text-left">
                 <input className="field font-medium" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
                 <input className="field" placeholder="Author" value={draft.author ?? ''} onChange={(e) => setDraft({ ...draft, author: e.target.value })} />
-                <input className="field" placeholder="Cover image URL" value={draft.coverImageUrl ?? ''} onChange={(e) => setDraft({ ...draft, coverImageUrl: e.target.value || null })} />
               </div>
             ) : (
               <>
@@ -187,6 +194,19 @@ export function BookDrawer({
           )}
         </div>
       </aside>
+      {pickingCover && (
+        <div onMouseDown={(e) => e.stopPropagation()}>
+          <CoverPicker
+            query={{ title: book.title, author: book.author, isbn: book.isbn, language: book.language }}
+            current={book.coverImageUrl}
+            onClose={() => setPickingCover(false)}
+            onPick={async (url) => {
+              setPickingCover(false)
+              await onSave({ ...book, coverImageUrl: url, dateModified: new Date().toISOString() })
+            }}
+          />
+        </div>
+      )}
     </div>
   )
 }
