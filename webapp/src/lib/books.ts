@@ -3,13 +3,14 @@ import type { Book, BookMetadata, PersonalFields } from '../types'
 import { STATUS_LABEL } from '../types'
 import { languageName } from './lookup'
 import { newId } from './store'
+import { guessLanguage } from './language'
 
 export function makeBook(meta: Partial<BookMetadata>, personal: Partial<PersonalFields>, userId: string): Book {
   const { source: _s, sourceId: _id, ...m } = meta
   return {
     ...m,
     ...personal,
-    language: personal.language || meta.language || null,
+    language: personal.language || meta.language || guessLanguage(meta)?.code || null,
     title: meta.title?.trim() || 'Untitled',
     status: personal.status ?? 'toRead',
     id: newId(),

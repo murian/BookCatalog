@@ -9,6 +9,7 @@ import { searchBooks, languageName } from '../lib/lookup'
 import { identifyFromPhoto } from '../lib/photo'
 import { parseCsvText, CSV_TEMPLATE, type CsvRow } from '../lib/csv'
 import { defaultPersonal, makeBook } from '../lib/books'
+import { guessLanguage } from '../lib/language'
 
 type Tab = 'search' | 'photo' | 'csv'
 
@@ -244,7 +245,18 @@ function ConfirmStep({
   onSave: (meta: BookMetadata, personal: PersonalFields) => Promise<void>
 }) {
   const [m, setM] = useState(meta)
-  const [p, setP] = useState<PersonalFields>({ ...defaultPersonal(), language: meta.language ?? null })
+  const initialGuess = meta.language ? null : guessLanguage(meta)
+  const [p, setP] = useState<PersonalFields>({ ...defaultPersonal(), language: meta.language ?? initialGuess?.code ?? null })
+  // Keep re-guessing from the title as it's typed, until the user picks a language themselves.
+  const [guessedFrom, setGuessedFrom] = useState<'description' | 'title' | null>(initialGuess?.from ?? null)
+  const [langChosen, setLangChosen] = useState(!!meta.language)
+  const retitle = (title: string) => {
+    setM({ ...m, title })
+    if (langChosen) return
+    const g = guessLanguage({ ...m, title })
+    setGuessedFrom(g?.from ?? null)
+    setP((prev) => ({ ...prev, language: g?.code ?? null }))
+  }
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [pickingCover, setPickingCover] = useState(false)
@@ -271,7 +283,7 @@ function ConfirmStep({
           </span>
         </button>
         <div className="min-w-0 flex-1 space-y-2">
-          <input className="field font-medium" required placeholder="Title" value={m.title} onChange={(e) => setM({ ...m, title: e.target.value })} autoFocus={manual} />
+          <input className="field font-medium" required placeholder="Title" value={m.title} onChange={(e) => retitle(e.target.value)} autoFocus={manual} />
           <input className="field" placeholder="Author" value={m.author ?? ''} onChange={(e) => setM({ ...m, author: e.target.value })} />
           <div className="grid grid-cols-2 gap-2">
             <input className="field" placeholder="ISBN" value={m.isbn ?? ''} onChange={(e) => setM({ ...m, isbn: e.target.value })} />
@@ -290,7 +302,17 @@ function ConfirmStep({
           <AlertTriangle size={16} /> “{duplicate.title}” is already on your shelf.
         </p>
       )}
-      <PersonalForm value={p} onChange={setP} />
+      <PersonalForm
+        value={p}
+        onChange={(next) => {
+          if (next.language !== p.language) {
+            setLangChosen(true)
+            setGuessedFrom(null)
+          }
+          setP(next)
+        }}
+        languageHint={guessedFrom && p.language ? `Guessed from the ${guessedFrom}` : undefined}
+      />
       {error && <p className="mt-4 text-sm text-rose-500">{error}</p>}
       <div className="mt-6 flex gap-2">
         <button type="button" className="btn-soft" onClick={onBack}>

@@ -12,7 +12,16 @@ const langLabel = (c: string) => {
   }
 }
 
-export function PersonalForm({ value, onChange }: { value: PersonalFields; onChange: (v: PersonalFields) => void }) {
+export function PersonalForm({
+  value,
+  onChange,
+  languageHint,
+}: {
+  value: PersonalFields
+  onChange: (v: PersonalFields) => void
+  /** Shown under the language field, e.g. when it was guessed rather than looked up. */
+  languageHint?: string
+}) {
   const set = <K extends keyof PersonalFields>(k: K, v: PersonalFields[K]) => onChange({ ...value, [k]: v })
   const lang = value.language ?? ''
 
@@ -53,6 +62,7 @@ export function PersonalForm({ value, onChange }: { value: PersonalFields; onCha
               </option>
             ))}
           </select>
+          {languageHint && <span className="mt-1 block text-xs text-zinc-400">{languageHint}</span>}
         </label>
         <label>
           <span className="label">Format</span>

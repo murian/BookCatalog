@@ -8,6 +8,7 @@ import { formatDate, sortBooks, stats, type SortKey } from './lib/books'
 import { languageName } from './lib/lookup'
 import { settings } from './lib/settings'
 import { autoCover } from './lib/covers'
+import { guessLanguage } from './lib/language'
 import { Cover } from './components/Cover'
 import { Logo } from './components/Logo'
 import { AddBookDialog } from './components/AddBookDialog'
@@ -406,6 +407,14 @@ export default function App() {
             await store?.saveMany(list.map((b) => ({ ...b, userId })))
           }}
           onFindCovers={() => fillCovers(all.filter((b) => !b.coverImageUrl))}
+          onGuessLanguages={async () => {
+            const updated = all
+              .filter((b) => !b.language)
+              .map((b) => ({ ...b, language: guessLanguage(b)?.code ?? null }))
+              .filter((b) => b.language)
+            if (updated.length) await store?.saveMany(updated)
+            return updated.length
+          }}
           onSignIn={() => {
             setShowSettings(false)
             setShowSignIn(true)
