@@ -1,10 +1,8 @@
 import type { BookMetadata } from '../types'
 import { fetchJson, fetchJsonOrJsonp } from './http'
-import { detectText, guessFromTitle } from './language'
 import { cleanIsbn } from './lookup'
 
 const stripHtml = (s?: string | null) => (s ? s.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim() : null)
-const guess = (title: string, text?: string | null) => (text ? detectText(text) : null) ?? guessFromTitle(title)
 
 // ---------- Apple Books (iTunes Search API) ----------
 
@@ -24,7 +22,6 @@ export function parseAppleBook(r: any): BookMetadata | null {
     pageCount: null,
     // "Books"/"Livros" is just the store category, not a genre.
     categories: (r.genres ?? []).filter((g: string) => !/^(books|livros|libros|livres|bücher)$/i.test(g)).slice(0, 4),
-    language: guess(r.trackName, description),
   }
 }
 
@@ -38,7 +35,6 @@ export async function appleSearch(term: string, max = 8): Promise<BookMetadata[]
 
 export function parseBrasilIsbn(d: any): BookMetadata | null {
   if (!d?.title) return null
-  const description = d.synopsis ?? null
   return {
     source: 'ISBN Brasil',
     sourceId: d.isbn,
@@ -47,11 +43,10 @@ export function parseBrasilIsbn(d: any): BookMetadata | null {
     isbn: cleanIsbn(d.isbn),
     publisher: d.publisher ?? null,
     publishedDate: d.year ? String(d.year) : null,
-    description,
+    description: d.synopsis ?? null,
     coverImageUrl: d.cover_url ?? null,
     pageCount: d.page_count || null,
     categories: d.subjects?.length ? d.subjects.slice(0, 4) : null,
-    language: guess(d.title, description),
   }
 }
 
@@ -88,12 +83,6 @@ const BOOKISH = new Set([
   'Q1760610', // comic book
 ])
 
-const WIKIDATA_LANGUAGES: Record<string, string> = {
-  Q1860: 'en', Q5146: 'pt', Q750553: 'pt', Q1321: 'es', Q150: 'fr', Q188: 'de', Q652: 'it', Q7411: 'nl',
-  Q7737: 'ru', Q5287: 'ja', Q7850: 'zh', Q397: 'la', Q7026: 'ca', Q9027: 'sv', Q809: 'pl', Q13955: 'ar',
-  Q9288: 'he', Q9176: 'ko', Q9129: 'el', Q256: 'tr',
-}
-
 const claimIds = (e: any, prop: string): string[] =>
   (e.claims?.[prop] ?? []).map((c: any) => c.mainsnak?.datavalue?.value?.id).filter(Boolean)
 const claimValue = (e: any, prop: string): any => e.claims?.[prop]?.[0]?.mainsnak?.datavalue?.value
@@ -107,7 +96,6 @@ export function parseWikidataEntity(e: any, labels: Record<string, string>, lang
   const pages = Number(String(claimValue(e, 'P1104')?.amount ?? '').replace('+', ''))
   const authors = claimIds(e, 'P50').map((id) => labels[id]).filter(Boolean)
   const genres = claimIds(e, 'P136').map((id) => labels[id]).filter(Boolean)
-  const language = claimIds(e, 'P407').map((id) => WIKIDATA_LANGUAGES[id]).find(Boolean) ?? null
   const description = langs.map((l) => e.descriptions?.[l]?.value).find(Boolean) ?? null
   return {
     source: 'Wikidata',
@@ -121,14 +109,14 @@ export function parseWikidataEntity(e: any, labels: Record<string, string>, lang
     coverImageUrl: image ? `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(image)}?width=400` : null,
     pageCount: pages > 0 ? pages : null,
     categories: genres.length ? genres.slice(0, 4) : null,
-    language,
   }
 }
 
 const WD = 'https://www.wikidata.org/w/api.php?format=json&origin=*'
 
 export async function wikidataSearch(text: string, max = 6): Promise<BookMetadata[]> {
-  const lang = guessFromTitle(text) ?? 'en'
+  // Search in the reader's own language (Wikidata falls back to English labels).
+  const lang = (navigator.language || 'en').slice(0, 2).toLowerCase()
   const langs = [...new Set([lang, 'en', 'pt'])]
   const found = await fetchJson(
     `${WD}&action=wbsearchentities&type=item&limit=12&language=${lang}&uselang=${lang}&search=${encodeURIComponent(text)}`,

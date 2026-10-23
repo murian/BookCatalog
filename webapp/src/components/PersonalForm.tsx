@@ -1,26 +1,23 @@
 import { Star } from 'lucide-react'
+import type { ReactNode } from 'react'
 import type { BookFormat, PersonalFields, ReadingStatus } from '../types'
 import { STATUS_LABEL } from '../types'
 import { dateInput } from '../lib/books'
-
-const LANGS = ['en', 'pt', 'es', 'fr', 'de', 'it', 'ja', 'zh', 'ru', 'nl']
-const langLabel = (c: string) => {
-  try {
-    return new Intl.DisplayNames(['en'], { type: 'language' }).of(c) ?? c
-  } catch {
-    return c
-  }
-}
+import { LANGUAGE_CHOICES, languageName } from '../lib/lookup'
+import { CategorySelect } from './CategorySelect'
 
 export function PersonalForm({
   value,
   onChange,
-  languageHint,
+  usedCategories,
+  categoryHint,
 }: {
   value: PersonalFields
   onChange: (v: PersonalFields) => void
-  /** Shown under the language field, e.g. when it was guessed rather than looked up. */
-  languageHint?: string
+  /** The user's own categories, offered alongside the built-in ones. */
+  usedCategories?: string[]
+  /** Shown under the category, e.g. a suggestion to apply. */
+  categoryHint?: ReactNode
 }) {
   const set = <K extends keyof PersonalFields>(k: K, v: PersonalFields[K]) => onChange({ ...value, [k]: v })
   const lang = value.language ?? ''
@@ -51,18 +48,23 @@ export function PersonalForm({
         </div>
       </div>
 
+      <div>
+        <span className="label">Category</span>
+        <CategorySelect value={value.category ?? null} onChange={(c) => set('category', c)} used={usedCategories} />
+        {categoryHint}
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <label>
           <span className="label">Language</span>
           <select className="field" value={lang} onChange={(e) => set('language', e.target.value || null)}>
             <option value="">—</option>
-            {[...new Set([...LANGS, ...(lang ? [lang] : [])])].map((c) => (
+            {[...new Set([...LANGUAGE_CHOICES, ...(lang ? [lang] : [])])].map((c) => (
               <option key={c} value={c}>
-                {langLabel(c)}
+                {languageName(c)}
               </option>
             ))}
           </select>
-          {languageHint && <span className="mt-1 block text-xs text-zinc-400">{languageHint}</span>}
         </label>
         <label>
           <span className="label">Format</span>

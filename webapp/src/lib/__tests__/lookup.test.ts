@@ -38,17 +38,18 @@ describe('parsers', () => {
       author: 'Frank Herbert',
       isbn: '9780441172719',
       coverImageUrl: 'https://books.google.com/books/content?id=abc&printsec=frontcover&img=1&zoom=1',
-      language: 'en',
       pageCount: 535,
     })
+    // The source's language belongs to that edition, which may not be the reader's copy.
+    expect(parseGoogleVolume(google)).not.toHaveProperty('language')
   })
   it('parses an Open Library doc', () => {
     expect(parseOpenLibraryDoc(ol)).toMatchObject({
       isbn: '9780441172719',
       coverImageUrl: 'https://covers.openlibrary.org/b/id/12345-L.jpg',
-      language: 'en',
       publishedDate: '1965',
     })
+    expect(parseOpenLibraryDoc(ol)).not.toHaveProperty('language')
   })
   it('merges duplicates and fills gaps', () => {
     const g = parseGoogleVolume({ ...google, volumeInfo: { ...google.volumeInfo, imageLinks: undefined } })!

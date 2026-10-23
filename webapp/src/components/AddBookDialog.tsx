@@ -1,15 +1,17 @@
 import { Camera, Check, FileSpreadsheet, ImageUp, Loader2, PenLine, Search, Sparkles, Download, AlertTriangle } from 'lucide-react'
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import type { Book, BookMetadata, PersonalFields } from '../types'
 import { Modal } from './Modal'
 import { Cover } from './Cover'
 import { PersonalForm } from './PersonalForm'
 import { CoverPicker } from './CoverPicker'
-import { searchBooks, languageName } from '../lib/lookup'
+import { SuggestionHint } from './CategorySelect'
+import { searchBooks } from '../lib/lookup'
 import { identifyFromPhoto } from '../lib/photo'
 import { parseCsvText, CSV_TEMPLATE, type CsvRow } from '../lib/csv'
 import { defaultPersonal, makeBook } from '../lib/books'
-import { guessLanguage } from '../lib/language'
+import { suggestCategory, suggestFor, usedCategories, withFoundSubjects } from '../lib/categories'
+import { fetchSubjects } from '../lib/subjects'
 
 type Tab = 'search' | 'photo' | 'csv'
 
@@ -43,6 +45,7 @@ export function AddBookDialog({ userId, existing, initialTab = 'search', onAdd, 
         <ConfirmStep
           meta={picked}
           duplicate={findDuplicate(existing, picked)}
+          used={usedCategories(existing)}
           onBack={() => setPicked(null)}
           onSave={async (meta, personal) => {
             await onAdd([makeBook(meta, personal, userId)])
@@ -94,7 +97,7 @@ function ResultList({ results, onPick }: { results: BookMetadata[]; onPick: (m: 
               <p className="mt-1 flex items-center gap-2 text-xs text-zinc-400">
                 <span className="shrink-0 rounded-full bg-brand-700/10 px-2 py-0.5 font-medium text-brand-700 dark:bg-brand-400/15 dark:text-brand-200">{r.source}</span>
                 <span className="truncate">
-                  {[r.publishedDate?.slice(0, 4), languageName(r.language), r.pageCount && `${r.pageCount} pages`].filter(Boolean).join(' · ')}
+                  {[r.publishedDate?.slice(0, 4), r.publisher, r.pageCount && `${r.pageCount} pages`].filter(Boolean).join(' · ')}
                 </span>
               </p>
             </div>
@@ -239,31 +242,42 @@ function PhotoPanel({ onPick }: { onPick: (m: BookMetadata) => void }) {
 function ConfirmStep({
   meta,
   duplicate,
+  used,
   onBack,
   onSave,
 }: {
   meta: BookMetadata
   duplicate?: Book
+  used: string[]
   onBack: () => void
   onSave: (meta: BookMetadata, personal: PersonalFields) => Promise<void>
 }) {
   const [m, setM] = useState(meta)
-  const initialGuess = meta.language ? null : guessLanguage(meta)
-  const [p, setP] = useState<PersonalFields>({ ...defaultPersonal(), language: meta.language ?? initialGuess?.code ?? null })
-  // Keep re-guessing from the title as it's typed, until the user picks a language themselves.
-  const [guessedFrom, setGuessedFrom] = useState<'description' | 'title' | null>(initialGuess?.from ?? null)
-  const [langChosen, setLangChosen] = useState(!!meta.language)
-  const retitle = (title: string) => {
-    setM({ ...m, title })
-    if (langChosen) return
-    const g = guessLanguage({ ...m, title })
-    setGuessedFrom(g?.from ?? null)
-    setP((prev) => ({ ...prev, language: g?.code ?? null }))
-  }
+  const [p, setP] = useState<PersonalFields>(defaultPersonal())
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [pickingCover, setPickingCover] = useState(false)
   const manual = meta.source === 'Manual'
+
+  // The result's subjects, plus more from the book databases when they don't settle it.
+  // They only ever feed a suggestion the reader can take or leave.
+  const [found, setFound] = useState<string[]>([])
+  const [looking, setLooking] = useState(false)
+  useEffect(() => {
+    if (manual || suggestCategory(meta.categories)?.confidence === 'high') return
+    let alive = true
+    setLooking(true)
+    fetchSubjects(meta).then((subjects) => {
+      if (!alive) return
+      setLooking(false)
+      setFound(subjects)
+    })
+    return () => {
+      alive = false
+    }
+  }, [meta, manual])
+  const suggestion = suggestFor([...(meta.categories ?? []), ...found])
+  const offer = suggestion?.confidence === 'high' && !p.category ? suggestion : null
 
   return (
     <form
@@ -271,7 +285,7 @@ function ConfirmStep({
         e.preventDefault()
         setSaving(true)
         try {
-          await onSave(m, p)
+          await onSave({ ...m, categories: withFoundSubjects(m, found) }, p)
         } catch (err) {
           setError((err as Error).message)
           setSaving(false)
@@ -286,7 +300,7 @@ function ConfirmStep({
           </span>
         </button>
         <div className="min-w-0 flex-1 space-y-2">
-          <input className="field font-medium" required placeholder="Title" value={m.title} onChange={(e) => retitle(e.target.value)} autoFocus={manual} />
+          <input className="field font-medium" required placeholder="Title" value={m.title} onChange={(e) => setM({ ...m, title: e.target.value })} autoFocus={manual} />
           <input className="field" placeholder="Author" value={m.author ?? ''} onChange={(e) => setM({ ...m, author: e.target.value })} />
           <div className="grid grid-cols-2 gap-2">
             <input className="field" placeholder="ISBN" value={m.isbn ?? ''} onChange={(e) => setM({ ...m, isbn: e.target.value })} />
@@ -307,14 +321,9 @@ function ConfirmStep({
       )}
       <PersonalForm
         value={p}
-        onChange={(next) => {
-          if (next.language !== p.language) {
-            setLangChosen(true)
-            setGuessedFrom(null)
-          }
-          setP(next)
-        }}
-        languageHint={guessedFrom && p.language ? `Guessed from the ${guessedFrom}` : undefined}
+        onChange={setP}
+        usedCategories={used}
+        categoryHint={<SuggestionHint suggestion={offer} looking={looking && !p.category} onUse={() => offer && setP({ ...p, category: offer.name })} />}
       />
       {error && <p className="mt-4 text-sm text-rose-500">{error}</p>}
       <div className="mt-6 flex gap-2">
@@ -327,7 +336,7 @@ function ConfirmStep({
       </div>
       {pickingCover && (
         <CoverPicker
-          query={{ title: m.title, author: m.author, isbn: m.isbn, language: p.language ?? m.language }}
+          query={{ title: m.title, author: m.author, isbn: m.isbn, language: p.language }}
           current={m.coverImageUrl}
           onClose={() => setPickingCover(false)}
           onPick={(url) => {
@@ -404,7 +413,7 @@ function CsvPanel({ userId, existing, onAdd, onDone }: { userId: string; existin
           <FileSpreadsheet size={32} className="text-brand-600 dark:text-brass-400" />
           <span className="font-medium">Choose a CSV file</span>
           <span className="max-w-md text-center text-sm text-zinc-500">
-            One title per line works. Optional columns: <code>author, isbn, language, bought, started, finished, status, rating, notes</code>. Goodreads exports work too.
+            One title per line works. Optional columns: <code>author, isbn, language, category, bought, started, finished, status, rating, notes</code>. Goodreads exports work too.
           </span>
         </button>
         <input ref={fileRef} type="file" accept=".csv,text/csv,text/plain" hidden onChange={(e) => load(e.target.files?.[0])} />
@@ -442,6 +451,7 @@ function CsvPanel({ userId, existing, onAdd, onDone }: { userId: string; existin
             notes: row.notes ?? null,
             format: row.format ?? null,
             language: row.language || null,
+            category: row.category || null,
           },
           userId,
         )
@@ -484,7 +494,7 @@ function CsvPanel({ userId, existing, onAdd, onDone }: { userId: string; existin
                   <select className="field mt-1 py-1.5" value={it.choice} onChange={(e) => update(i, { choice: Number(e.target.value) })}>
                     {it.matches.map((mm, j) => (
                       <option key={j} value={j}>
-                        {mm.title} — {mm.author ?? 'Unknown'} {mm.publishedDate ? `(${mm.publishedDate.slice(0, 4)})` : ''} · {languageName(mm.language)}
+                        {mm.title} — {mm.author ?? 'Unknown'} {mm.publishedDate ? `(${mm.publishedDate.slice(0, 4)})` : ''} · {mm.source}
                       </option>
                     ))}
                     <option value={-1}>{it.status === 'error' ? 'Lookup failed. ' : it.matches.length ? '' : 'No match. '}Keep as written in the CSV</option>

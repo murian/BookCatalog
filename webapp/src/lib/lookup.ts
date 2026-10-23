@@ -3,7 +3,7 @@ import { settings } from './settings'
 import { fetchJson } from './http'
 import { appleSearch, brasilIsbnLookup, wikidataSearch } from './sources'
 
-// Open Library uses MARC (3-letter) language codes; normalise everything to ISO 639-1.
+// Library catalogs use MARC (3-letter) language codes; normalise everything to ISO 639-1.
 const MARC_TO_ISO: Record<string, string> = {
   eng: 'en', por: 'pt', spa: 'es', fre: 'fr', fra: 'fr', ger: 'de', deu: 'de', ita: 'it', jpn: 'ja',
   rus: 'ru', chi: 'zh', zho: 'zh', dut: 'nl', nld: 'nl', swe: 'sv', dan: 'da', nor: 'no', fin: 'fi',
@@ -25,6 +25,9 @@ export function languageName(code?: string | null): string {
     return code
   }
 }
+
+/** Languages offered first when choosing one. */
+export const LANGUAGE_CHOICES = ['en', 'pt', 'es', 'fr', 'de', 'it', 'ja', 'zh', 'ru', 'nl']
 
 export function cleanIsbn(s?: string | null): string | null {
   if (!s) return null
@@ -52,7 +55,6 @@ export function parseGoogleVolume(item: any): BookMetadata | null {
     coverImageUrl: img ? img.replace(/^http:/, 'https:').replace('&edge=curl', '') : null,
     pageCount: v.pageCount || null,
     categories: v.categories ?? null,
-    language: normalizeLanguage(v.language),
   }
 }
 
@@ -65,7 +67,7 @@ async function googleSearch(q: string, max = 8): Promise<BookMetadata[]> {
 
 // ---------- Open Library ----------
 
-const OL_FIELDS = 'key,title,subtitle,author_name,first_publish_year,isbn,publisher,number_of_pages_median,subject,language,cover_i'
+const OL_FIELDS = 'key,title,subtitle,author_name,first_publish_year,isbn,publisher,number_of_pages_median,subject,cover_i'
 
 export function parseOpenLibraryDoc(d: any): BookMetadata | null {
   if (!d?.title) return null
@@ -83,7 +85,6 @@ export function parseOpenLibraryDoc(d: any): BookMetadata | null {
     coverImageUrl: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-L.jpg` : null,
     pageCount: d.number_of_pages_median ?? null,
     categories: d.subject?.slice(0, 5) ?? null,
-    language: normalizeLanguage(d.language?.[0]),
   }
 }
 

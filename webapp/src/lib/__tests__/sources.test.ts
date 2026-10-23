@@ -21,8 +21,8 @@ describe('parseAppleBook', () => {
       publishedDate: '2014-03-01',
       coverImageUrl: 'https://is1.mzstatic.com/image/thumb/x/600x600bb.jpg',
       categories: ['Ficção e literatura'],
-      language: 'pt',
     })
+    expect(b).not.toHaveProperty('language')
     expect(b.description).not.toContain('<p>')
     expect(parseAppleBook({})).toBeNull()
   })
@@ -30,8 +30,7 @@ describe('parseAppleBook', () => {
 
 describe('parseBrasilIsbn', () => {
   it('maps a BrasilAPI ISBN record', () => {
-    expect(
-      parseBrasilIsbn({
+    const b = parseBrasilIsbn({
         isbn: '9788535910681',
         title: 'Grande sertão',
         subtitle: 'veredas',
@@ -42,8 +41,8 @@ describe('parseBrasilIsbn', () => {
         subjects: ['Ficção brasileira'],
         cover_url: 'https://example.com/c.jpg',
         synopsis: null,
-      }),
-    ).toMatchObject({
+      })
+    expect(b).toMatchObject({
       source: 'ISBN Brasil',
       title: 'Grande sertão: veredas',
       author: 'João Guimarães Rosa',
@@ -51,8 +50,8 @@ describe('parseBrasilIsbn', () => {
       publishedDate: '2019',
       pageCount: 560,
       categories: ['Ficção brasileira'],
-      language: 'pt',
     })
+    expect(b).not.toHaveProperty('language')
     expect(parseBrasilIsbn({ message: 'not found' })).toBeNull()
   })
 })
@@ -73,16 +72,18 @@ describe('parseWikidataEntity', () => {
     },
   }
   it('maps a literary work', () => {
-    expect(parseWikidataEntity(entity, { Q311145: 'Machado de Assis', Q8261: 'novel' }, ['pt', 'en'])).toMatchObject({
+    const b = parseWikidataEntity(entity, { Q311145: 'Machado de Assis', Q8261: 'novel' }, ['pt', 'en'])
+    expect(b).toMatchObject({
       source: 'Wikidata',
       title: 'Dom Casmurro',
       author: 'Machado de Assis',
-      language: 'pt',
       publishedDate: '1899',
       categories: ['novel'],
       coverImageUrl: 'https://commons.wikimedia.org/wiki/Special:FilePath/Dom%20Casmurro%201899.jpg?width=400',
       description: '1899 novel by Machado de Assis',
     })
+    // P407 is the language the work was written in, not the reader's edition.
+    expect(b).not.toHaveProperty('language')
   })
   it('ignores items that are not books', () => {
     expect(parseWikidataEntity({ ...entity, claims: { P31: claim({ id: 'Q5' }) } }, {}, ['en'])).toBeNull()
