@@ -6,16 +6,21 @@ import { Cover } from './Cover'
 import { PersonalForm } from './PersonalForm'
 import { formatDate, readingDays } from '../lib/books'
 import { languageName } from '../lib/lookup'
+import { suggestCategory, suggestFor, withFoundSubjects } from '../lib/categories'
+import { fetchSubjects } from '../lib/subjects'
 import { StatusBadge } from './StatusBadge'
 import { CoverPicker } from './CoverPicker'
+import { CategorySelect, SuggestionHint } from './CategorySelect'
 
 export function BookDrawer({
   book,
+  usedCategories,
   onClose,
   onSave,
   onDelete,
 }: {
   book: Book
+  usedCategories: string[]
   onClose: () => void
   onSave: (b: Book) => Promise<void>
   onDelete: (b: Book) => Promise<void>
@@ -24,6 +29,27 @@ export function BookDrawer({
   const [draft, setDraft] = useState(book)
   const [busy, setBusy] = useState(false)
   const [pickingCover, setPickingCover] = useState(false)
+
+  // For a book without a category, suggest one from its subjects, looking more up if they don't settle it.
+  const [online, setOnline] = useState<string[]>([])
+  const [looking, setLooking] = useState(false)
+  useEffect(() => {
+    setOnline([])
+    if (book.category || suggestCategory(book.categories)?.confidence === 'high') return
+    let alive = true
+    setLooking(true)
+    fetchSubjects(book).then((found) => alive && (setOnline(found), setLooking(false)))
+    return () => {
+      alive = false
+      setLooking(false)
+    }
+    // Only when another book is opened, not after each save of this one.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [book.id])
+  const suggestion = suggestFor([...(book.categories ?? []), ...online])
+  const strong = suggestion?.confidence === 'high' ? suggestion : null
+  const withSubjects = (b: Book): Book => (online.length ? { ...b, categories: withFoundSubjects(b, online) } : b)
+  const setCategory = (category: string | null) => onSave(withSubjects({ ...book, category, dateModified: new Date().toISOString() }))
 
   useEffect(() => {
     setDraft(book)
@@ -40,7 +66,7 @@ export function BookDrawer({
   const save = async () => {
     setBusy(true)
     try {
-      await onSave({ ...draft, dateModified: new Date().toISOString() })
+      await onSave(withSubjects({ ...draft, dateModified: new Date().toISOString() }))
       setEditing(false)
     } finally {
       setBusy(false)
@@ -105,7 +131,18 @@ export function BookDrawer({
 
           {editing ? (
             <>
-              <PersonalForm value={draft as PersonalFields & Book} onChange={(p) => setDraft({ ...draft, ...p })} />
+              <PersonalForm
+                value={draft as PersonalFields & Book}
+                onChange={(p) => setDraft({ ...draft, ...p })}
+                usedCategories={usedCategories}
+                categoryHint={
+                  <SuggestionHint
+                    suggestion={draft.category ? null : strong}
+                    looking={looking && !draft.category}
+                    onUse={() => strong && setDraft({ ...draft, category: strong.name })}
+                  />
+                }
+              />
               <div className="mt-6 flex gap-2">
                 <button
                   className="btn-soft"
@@ -134,6 +171,16 @@ export function BookDrawer({
                 ))}
               </div>
 
+              <div className="mt-6">
+                <h3 className="label">Category</h3>
+                <CategorySelect value={book.category ?? null} onChange={setCategory} used={usedCategories} />
+                <SuggestionHint
+                  suggestion={book.category ? null : strong}
+                  looking={looking && !book.category}
+                  onUse={() => strong && setCategory(strong.name)}
+                />
+              </div>
+
               <dl className="mt-6 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
                 {(
                   [
@@ -157,12 +204,15 @@ export function BookDrawer({
               </dl>
 
               {book.categories?.length ? (
-                <div className="mt-5 flex flex-wrap gap-1.5">
-                  {book.categories.map((c) => (
-                    <span key={c} className="rounded-full bg-brass-500/15 px-2.5 py-1 text-xs text-brass-700 dark:text-brass-300">
-                      {c}
-                    </span>
-                  ))}
+                <div className="mt-6">
+                  <h3 className="label">Subjects</h3>
+                  <div className="flex flex-wrap gap-1.5">
+                    {book.categories.map((c) => (
+                      <span key={c} className="rounded-full bg-brass-500/15 px-2.5 py-1 text-xs text-brass-700 dark:text-brass-300">
+                        {c}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               ) : null}
 

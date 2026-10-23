@@ -1,4 +1,4 @@
-type Key = 'googleBooksKey' | 'geminiKey' | 'theme'
+type Key = 'googleBooksKey' | 'geminiKey' | 'theme' | 'categoryRenames' | 'sectionOrder' | 'shelvedIds'
 
 export const settings = {
   get(k: Key): string {
@@ -15,5 +15,15 @@ export const settings = {
     } catch {
       /* storage unavailable */
     }
+  },
+  getJson<T>(k: Key, fallback: T): T {
+    try {
+      return JSON.parse(settings.get(k)) ?? fallback
+    } catch {
+      return fallback
+    }
+  },
+  setJson(k: Key, v: unknown) {
+    settings.set(k, JSON.stringify(v))
   },
 }

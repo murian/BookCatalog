@@ -146,3 +146,14 @@ body {
     transition: none !important;
   }
 }
+
+/* Printing the shelf plan: only the plan, on plain paper. */
+@media print {
+  body:has(> .print-area) {
+    overflow: visible !important;
+    background: white;
+  }
+  body:has(> .print-area) > :not(.print-area) {
+    display: none !important;
+  }
+}

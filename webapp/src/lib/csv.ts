@@ -8,6 +8,7 @@ export interface CsvRow {
   author?: string
   isbn?: string
   language?: string
+  category?: string
   purchaseDate?: string | null
   purchaseDateUnknown?: boolean
   startReadingDate?: string | null
@@ -18,7 +19,7 @@ export interface CsvRow {
   format?: BookFormat
 }
 
-type Field = 'title' | 'author' | 'isbn' | 'language' | 'bought' | 'started' | 'finished' | 'status' | 'rating' | 'notes' | 'format'
+type Field = 'title' | 'author' | 'isbn' | 'language' | 'category' | 'bought' | 'started' | 'finished' | 'status' | 'rating' | 'notes' | 'format'
 
 // Header aliases (English, Portuguese, Spanish). Compared after lowercasing and stripping accents/punctuation.
 const ALIASES: Record<Field, string[]> = {
@@ -26,6 +27,8 @@ const ALIASES: Record<Field, string[]> = {
   author: ['author', 'authors', 'writer', 'autor', 'autores', 'escritor'],
   isbn: ['isbn', 'isbn13', 'isbn10', 'ean'],
   language: ['language', 'lang', 'idioma', 'lingua'],
+  // Not "shelf"/"estante": Goodreads and Skoob use those for the reading status.
+  category: ['category', 'categoria', 'genre', 'genero', 'section', 'secao', 'seccion'],
   bought: ['bought', 'purchased', 'purchasedate', 'datebought', 'boughton', 'dateacquired', 'acquired', 'comprado', 'datacompra', 'datadecompra', 'compra', 'fechacompra'],
   started: ['started', 'start', 'startdate', 'startreading', 'startreadingdate', 'datestarted', 'inicio', 'comecei', 'datainicio', 'iniciado'],
   finished: ['finished', 'end', 'ended', 'enddate', 'finishdate', 'finishreadingdate', 'dateread', 'datefinished', 'fim', 'terminei', 'datafim', 'terminado', 'lido'],
@@ -121,6 +124,7 @@ export function parseCsvText(text: string): CsvRow[] {
         // Goodreads exports ISBNs as ="0123456789"
         isbn: cleanIsbn(get(r, 'isbn')) ?? undefined,
         language: languageCode(get(r, 'language')) ?? undefined,
+        category: get(r, 'category'),
         purchaseDate: bought === 'unknown' ? null : bought,
         purchaseDateUnknown: bought === 'unknown',
         startReadingDate: startDate,
@@ -134,8 +138,8 @@ export function parseCsvText(text: string): CsvRow[] {
     .filter((r) => r.title || r.isbn)
 }
 
-export const CSV_TEMPLATE = `title,author,isbn,language,bought,started,finished,status,rating,notes
-The Hobbit,J.R.R. Tolkien,,en,2021-03-14,2021-04-01,2021-04-20,finished,5,Re-read
-Dom Casmurro,Machado de Assis,,pt,unknown,,,to read,,
-,,9780143127550,,,2024-01-10,,reading,,
+export const CSV_TEMPLATE = `title,author,isbn,language,category,bought,started,finished,status,rating,notes
+The Hobbit,J.R.R. Tolkien,,en,Science fiction & fantasy,2021-03-14,2021-04-01,2021-04-20,finished,5,Re-read
+Dom Casmurro,Machado de Assis,,pt,Brazilian literature,unknown,,,to read,,
+,,9780143127550,,,,2024-01-10,,reading,,
 `

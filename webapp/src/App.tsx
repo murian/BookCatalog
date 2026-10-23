@@ -1,24 +1,31 @@
-import { Camera, Cloud, FileSpreadsheet, LayoutGrid, List, Plus, Search, Settings, Star, CloudOff, X } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Camera, Check, Cloud, FileSpreadsheet, LayoutGrid, LibraryBig, List, Plus, Search, Settings, SquareCheck, Star, CloudOff, X } from 'lucide-react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import type { Book, ReadingStatus } from './types'
 import { STATUS_LABEL } from './types'
 import { useAuth } from './lib/useAuth'
 import { clearLocalBooks, cloudStore, localStore, readLocalBooks, type BookStore } from './lib/store'
 import { formatDate, sortBooks, stats, type SortKey } from './lib/books'
-import { languageName } from './lib/lookup'
+import { LANGUAGE_CHOICES, languageName } from './lib/lookup'
+import { groupByCategory, usedCategories, type Section } from './lib/categories'
 import { settings } from './lib/settings'
 import { autoCover } from './lib/covers'
-import { guessLanguage } from './lib/language'
 import { Cover } from './components/Cover'
 import { Logo } from './components/Logo'
 import { AddBookDialog } from './components/AddBookDialog'
 import { BookDrawer } from './components/BookDrawer'
+import { CategorySelect } from './components/CategorySelect'
+import { OrganizeDialog } from './components/OrganizeDialog'
 import { SettingsDialog } from './components/SettingsDialog'
 import { SignInDialog } from './components/SignInDialog'
 import { StatusBadge } from './components/StatusBadge'
 
 type Filter = 'all' | ReadingStatus
 type AddTab = 'search' | 'photo' | 'csv'
+
+// Filter value for books with no language or no category.
+const NONE = '\u0000none'
+// Filter selects share a line on phones and keep their natural width (up to a limit) elsewhere.
+const FILTER = 'field min-w-0 flex-1 basis-40 py-2 sm:w-auto sm:max-w-52 sm:flex-none'
 
 function useTheme() {
   const [theme, setTheme] = useState(() => settings.get('theme') || 'system')
@@ -41,9 +48,13 @@ export default function App() {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<SortKey>('added')
   const [lang, setLang] = useState('')
+  const [cat, setCat] = useState('')
   const [view, setView] = useState<'grid' | 'list'>('grid')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selecting, setSelecting] = useState(false)
+  const [picked, setPicked] = useState<ReadonlySet<string>>(new Set())
   const [adding, setAdding] = useState<AddTab | null>(null)
+  const [organizing, setOrganizing] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showSignIn, setShowSignIn] = useState(false)
   const [toast, setToast] = useState('')
@@ -106,28 +117,63 @@ export default function App() {
     notify(`Moved ${local.length} books to your account`)
   }
 
-  const all = books ?? []
+  const all = useMemo(() => books ?? [], [books])
   const s = stats(all)
   const languages = useMemo(() => [...new Set(all.map((b) => b.language).filter(Boolean) as string[])].sort(), [all])
+  const used = useMemo(() => usedCategories(all), [all])
+  // Shelf sections for the category filter. Recomputed after Organize, where their order can change.
+  const shelf = useMemo(() => groupByCategory(all), [all, organizing])
+  // A filter whose value no longer exists (e.g. after changing every book's language) shows everything.
+  const langFilter = lang === NONE || languages.includes(lang) ? lang : ''
+  const catFilter = cat === NONE || used.includes(cat) ? cat : ''
   const reading = all.filter((b) => b.status === 'reading')
-  const visible = useMemo(() => {
+  const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return sortBooks(
-      all.filter(
-        (b) =>
-          (filter === 'all' || b.status === filter) &&
-          (!lang || b.language === lang) &&
-          (!q || [b.title, b.author, b.isbn, b.publisher, b.notes, ...(b.categories ?? [])].some((v) => v?.toLowerCase().includes(q))),
-      ),
-      sort,
+    return all.filter(
+      (b) =>
+        (filter === 'all' || b.status === filter) &&
+        (!langFilter || (langFilter === NONE ? !b.language : b.language === langFilter)) &&
+        (!catFilter || (catFilter === NONE ? !b.category?.trim() : b.category?.trim() === catFilter)) &&
+        (!q || [b.title, b.author, b.isbn, b.publisher, b.notes, b.category, ...(b.categories ?? [])].some((v) => v?.toLowerCase().includes(q))),
     )
-  }, [all, filter, lang, query, sort])
+  }, [all, filter, langFilter, catFilter, query])
+  const grouped = sort === 'category'
+  const sections: Section[] = useMemo(
+    () => (grouped ? groupByCategory(filtered) : [{ name: null, books: sortBooks(filtered, sort) }]),
+    [filtered, sort, grouped, organizing],
+  )
+  const visible = useMemo(() => sections.flatMap((sec) => sec.books), [sections])
   const selected = all.find((b) => b.id === selectedId)
   const counts = (f: Filter) => (f === 'all' ? all.length : all.filter((b) => b.status === f).length)
   const greeting = ['Good night', 'Good morning', 'Good afternoon', 'Good evening'][Math.floor(((new Date().getHours() + 18) % 24) / 6) % 4]
 
+  const open = (b: Book) => {
+    if (!selecting) return setSelectedId(b.id)
+    const next = new Set(picked)
+    if (!next.delete(b.id)) next.add(b.id)
+    setPicked(next)
+  }
+  const stopSelecting = () => {
+    setSelecting(false)
+    setPicked(new Set())
+  }
+  /** Applies one change to every selected book. */
+  const bulk = async (patch: Partial<Book>, message: (n: string) => string) => {
+    const list = all.filter((b) => picked.has(b.id))
+    if (!store || !list.length) return
+    const now = new Date().toISOString()
+    await store.saveMany(list.map((b) => ({ ...b, ...patch, dateModified: now })))
+    notify(message(`${list.length} book${list.length === 1 ? '' : 's'}`))
+  }
+
+  const sectionTitle = (sec: Section) => (
+    <>
+      {sec.name ?? 'No category'} <span className="text-sm font-normal text-zinc-500 tabular-nums">{sec.books.length}</span>
+    </>
+  )
+
   return (
-    <div className="aurora min-h-dvh pb-28">
+    <div className={`aurora min-h-dvh ${selecting ? 'pb-48 sm:pb-32' : 'pb-28'}`}>
       {/* Header */}
       <header className="glass sticky top-0 z-30 border-x-0 border-t-0">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6">
@@ -196,8 +242,17 @@ export default function App() {
 
         {/* Hero */}
         <section className="pt-8 pb-6 sm:pt-12">
-          <p className="text-sm font-medium text-brand-700 dark:text-brass-300">{greeting}</p>
-          <h1 className="font-display mt-1 text-3xl font-semibold tracking-tight sm:text-5xl">Your library</h1>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-brand-700 dark:text-brass-300">{greeting}</p>
+              <h1 className="font-display mt-1 text-3xl font-semibold tracking-tight sm:text-5xl">Your library</h1>
+            </div>
+            {all.length > 0 && (
+              <button className="btn-soft" onClick={() => setOrganizing(true)}>
+                <LibraryBig size={16} /> Organize shelves
+              </button>
+            )}
+          </div>
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
               ['Books', s.total],
@@ -221,7 +276,14 @@ export default function App() {
               {reading.map((b) => {
                 const days = b.startReadingDate ? Math.max(0, Math.round((Date.now() - Date.parse(b.startReadingDate)) / 86_400_000)) : null
                 return (
-                  <button key={b.id} onClick={() => setSelectedId(b.id)} className="glass flex w-72 shrink-0 items-center gap-4 rounded-2xl p-3 text-left transition hover:-translate-y-0.5">
+                  <button
+                    key={b.id}
+                    onClick={() => open(b)}
+                    aria-pressed={selecting ? picked.has(b.id) : undefined}
+                    className={`glass flex w-72 shrink-0 items-center gap-4 rounded-2xl p-3 text-left transition hover:-translate-y-0.5 ${
+                      selecting && picked.has(b.id) ? 'ring-2 ring-brand-600 dark:ring-brass-400' : ''
+                    }`}
+                  >
                     <Cover title={b.title} author={b.author} url={b.coverImageUrl} isbn={b.isbn} className="w-14 shrink-0 rounded-lg" />
                     <div className="min-w-0">
                       <p className="line-clamp-2 font-medium">{b.title}</p>
@@ -235,8 +297,8 @@ export default function App() {
           </section>
         )}
 
-        {/* Controls */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        {/* Controls: the filters wrap onto their own line when they don't fit beside the chips. */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <div className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
             {(['all', 'reading', 'toRead', 'finished', 'abandoned'] as Filter[]).map((f) => (
               <button
@@ -249,21 +311,33 @@ export default function App() {
               </button>
             ))}
           </div>
-          <div className="flex min-w-0 gap-2 sm:ml-auto">
-            {languages.length > 1 && (
-              <select className="field min-w-0 flex-1 py-2 sm:w-auto sm:flex-none" value={lang} onChange={(e) => setLang(e.target.value)} aria-label="Language">
+          <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+            {used.length > 0 && (
+              <select className={FILTER} value={catFilter} onChange={(e) => setCat(e.target.value)} aria-label="Category">
+                <option value="">All categories</option>
+                {shelf.map((sec) => (
+                  <option key={sec.name ?? NONE} value={sec.name ?? NONE}>
+                    {sec.name ?? 'No category'} ({sec.books.length})
+                  </option>
+                ))}
+              </select>
+            )}
+            {(languages.length > 1 || (languages.length === 1 && all.some((b) => !b.language))) && (
+              <select className={FILTER} value={langFilter} onChange={(e) => setLang(e.target.value)} aria-label="Language">
                 <option value="">All languages</option>
                 {languages.map((l) => (
                   <option key={l} value={l}>
                     {languageName(l)}
                   </option>
                 ))}
+                <option value={NONE}>No language</option>
               </select>
             )}
-            <select className="field min-w-0 flex-1 py-2 sm:w-auto sm:flex-none" value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="Sort">
+            <select className={FILTER} value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="Sort">
               <option value="added">Recently added</option>
               <option value="title">Title</option>
               <option value="author">Author</option>
+              <option value="category">Category</option>
               <option value="finished">Recently finished</option>
               <option value="bought">Recently bought</option>
             </select>
@@ -279,6 +353,15 @@ export default function App() {
                 </button>
               ))}
             </div>
+            {all.length > 0 && (
+              <button
+                className={`btn shrink-0 px-3 py-2 ${selecting ? 'bg-brand-700 text-white hover:bg-brand-600' : 'bg-zinc-900/5 text-zinc-800 hover:bg-zinc-900/10 dark:bg-white/10 dark:text-zinc-100 dark:hover:bg-white/15'}`}
+                aria-pressed={selecting}
+                onClick={() => (selecting ? stopSelecting() : setSelecting(true))}
+              >
+                <SquareCheck size={16} /> Select
+              </button>
+            )}
           </div>
         </div>
 
@@ -295,33 +378,63 @@ export default function App() {
           ) : visible.length === 0 ? (
             <p className="py-16 text-center text-zinc-500">No books match your filters.</p>
           ) : view === 'grid' ? (
-            <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-              {visible.map((b, i) => (
-                <button key={b.id} onClick={() => setSelectedId(b.id)} className="group animate-rise text-left" style={{ animationDelay: `${Math.min(i, 24) * 20}ms` }}>
-                  <div className="relative transition duration-300 group-hover:-translate-y-1.5 group-hover:rotate-[-0.5deg]">
-                    <Cover title={b.title} author={b.author} url={b.coverImageUrl} isbn={b.isbn} className="group-hover:shadow-xl group-hover:shadow-brand-900/20" />
-                  </div>
-                  <p className="mt-3 line-clamp-2 text-sm leading-snug font-medium">{b.title}</p>
-                  <p className="truncate text-xs text-zinc-500">{b.author}</p>
-                  {(b.status !== 'toRead' || b.rating) && (
-                    <p className="mt-1.5 flex items-center gap-2 text-xs">
-                      {b.status !== 'toRead' && <StatusBadge status={b.status} />}
-                      {b.rating ? (
-                        <span className="flex items-center gap-0.5 text-brass-500">
-                          <Star size={11} className="fill-current" /> {b.rating}
-                        </span>
-                      ) : null}
-                    </p>
-                  )}
-                </button>
-              ))}
-            </div>
+            sections.map((sec) => (
+              <Fragment key={sec.name ?? NONE}>
+                {grouped && <h2 className="font-display mt-10 mb-4 text-xl font-semibold first:mt-0">{sectionTitle(sec)}</h2>}
+                <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                  {sec.books.map((b, i) => {
+                    const on = selecting && picked.has(b.id)
+                    return (
+                      <button
+                        key={b.id}
+                        onClick={() => open(b)}
+                        aria-pressed={selecting ? on : undefined}
+                        className="group animate-rise text-left"
+                        style={{ animationDelay: `${Math.min(i, 24) * 20}ms` }}
+                      >
+                        <div className="relative transition duration-300 group-hover:-translate-y-1.5 group-hover:rotate-[-0.5deg]">
+                          <Cover
+                            title={b.title}
+                            author={b.author}
+                            url={b.coverImageUrl}
+                            isbn={b.isbn}
+                            className={`group-hover:shadow-xl group-hover:shadow-brand-900/20 ${on ? 'ring-4 ring-brand-600 dark:ring-brass-400' : ''}`}
+                          />
+                          {selecting && (
+                            <span
+                              className={`absolute top-2 right-2 flex size-6 items-center justify-center rounded-full border-2 shadow ${
+                                on ? 'border-brand-600 bg-brand-600 text-white dark:border-brass-400 dark:bg-brass-400 dark:text-zinc-900' : 'border-white bg-black/30'
+                              }`}
+                            >
+                              {on && <Check size={14} strokeWidth={3} />}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-3 line-clamp-2 text-sm leading-snug font-medium">{b.title}</p>
+                        <p className="truncate text-xs text-zinc-500">{b.author}</p>
+                        {(b.status !== 'toRead' || b.rating) && (
+                          <p className="mt-1.5 flex items-center gap-2 text-xs">
+                            {b.status !== 'toRead' && <StatusBadge status={b.status} />}
+                            {b.rating ? (
+                              <span className="flex items-center gap-0.5 text-brass-500">
+                                <Star size={11} className="fill-current" /> {b.rating}
+                              </span>
+                            ) : null}
+                          </p>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </Fragment>
+            ))
           ) : (
             <div className="glass overflow-hidden rounded-2xl">
               <table className="w-full text-sm">
                 <thead className="text-left text-xs tracking-wide text-zinc-500 uppercase max-md:hidden">
                   <tr className="border-b border-zinc-900/5 dark:border-white/5">
                     <th className="p-3 font-medium">Book</th>
+                    {!grouped && <th className="p-3 font-medium">Category</th>}
                     <th className="p-3 font-medium">Language</th>
                     <th className="p-3 font-medium">Bought</th>
                     <th className="p-3 font-medium">Started</th>
@@ -330,28 +443,51 @@ export default function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {visible.map((b) => (
-                    <tr key={b.id} onClick={() => setSelectedId(b.id)} className="cursor-pointer border-b border-zinc-900/5 last:border-0 hover:bg-zinc-900/[0.03] dark:border-white/5 dark:hover:bg-white/[0.03]">
-                      <td className="p-3">
-                        <div className="flex items-center gap-3">
-                          <Cover title={b.title} url={b.coverImageUrl} isbn={b.isbn} className="w-9 shrink-0 rounded-md shadow-sm" />
-                          <div className="min-w-0">
-                            <p className="line-clamp-1 font-medium">{b.title}</p>
-                            <p className="truncate text-xs text-zinc-500">{b.author}</p>
-                            <div className="mt-1 md:hidden">
-                              <StatusBadge status={b.status} />
+                  {sections.map((sec) => (
+                    <Fragment key={sec.name ?? NONE}>
+                      {grouped && (
+                        <tr className="border-b border-zinc-900/5 bg-zinc-900/[0.03] dark:border-white/5 dark:bg-white/[0.03]">
+                          <th colSpan={6} className="font-display px-3 py-2 text-left text-base font-semibold">
+                            {sectionTitle(sec)}
+                          </th>
+                        </tr>
+                      )}
+                      {sec.books.map((b) => (
+                        <tr
+                          key={b.id}
+                          onClick={() => open(b)}
+                          aria-selected={selecting ? picked.has(b.id) : undefined}
+                          className={`cursor-pointer border-b border-zinc-900/5 last:border-0 hover:bg-zinc-900/[0.03] dark:border-white/5 dark:hover:bg-white/[0.03] ${
+                            selecting && picked.has(b.id) ? 'bg-brand-700/10 dark:bg-brass-400/10' : ''
+                          }`}
+                        >
+                          <td className="p-3">
+                            <div className="flex items-center gap-3">
+                              {selecting && (
+                                <input type="checkbox" className="pointer-events-none size-4 shrink-0 accent-brand-700" checked={picked.has(b.id)} readOnly tabIndex={-1} aria-hidden="true" />
+                              )}
+                              <Cover title={b.title} url={b.coverImageUrl} isbn={b.isbn} className="w-9 shrink-0 rounded-md shadow-sm" />
+                              <div className="min-w-0">
+                                <p className="line-clamp-1 font-medium">{b.title}</p>
+                                <p className="truncate text-xs text-zinc-500">{b.author}</p>
+                                <div className="mt-1 flex items-center gap-2 md:hidden">
+                                  <StatusBadge status={b.status} />
+                                  {b.category && !grouped && <span className="truncate text-xs text-zinc-500">{b.category}</span>}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-3 text-zinc-500 max-md:hidden">{languageName(b.language)}</td>
-                      <td className="p-3 whitespace-nowrap text-zinc-500 max-md:hidden">{b.purchaseDateUnknown ? 'Unknown' : formatDate(b.purchaseDate)}</td>
-                      <td className="p-3 whitespace-nowrap text-zinc-500 max-md:hidden">{formatDate(b.startReadingDate)}</td>
-                      <td className="p-3 whitespace-nowrap text-zinc-500 max-md:hidden">{formatDate(b.finishReadingDate)}</td>
-                      <td className="p-3 max-md:hidden">
-                        <StatusBadge status={b.status} />
-                      </td>
-                    </tr>
+                          </td>
+                          {!grouped && <td className="p-3 text-zinc-500 max-md:hidden">{b.category}</td>}
+                          <td className="p-3 text-zinc-500 max-md:hidden">{languageName(b.language)}</td>
+                          <td className="p-3 whitespace-nowrap text-zinc-500 max-md:hidden">{b.purchaseDateUnknown ? 'Unknown' : formatDate(b.purchaseDate)}</td>
+                          <td className="p-3 whitespace-nowrap text-zinc-500 max-md:hidden">{formatDate(b.startReadingDate)}</td>
+                          <td className="p-3 whitespace-nowrap text-zinc-500 max-md:hidden">{formatDate(b.finishReadingDate)}</td>
+                          <td className="p-3 max-md:hidden">
+                            <StatusBadge status={b.status} />
+                          </td>
+                        </tr>
+                      ))}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
@@ -361,21 +497,100 @@ export default function App() {
       </main>
 
       {/* Mobile quick actions */}
-      <div className="fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-30 flex flex-col items-end gap-3 sm:hidden">
-        <button className="glass flex size-12 items-center justify-center rounded-full shadow-lg" onClick={() => setAdding('photo')} aria-label="Add from photo">
-          <Camera size={20} />
-        </button>
-        <button
-          className="flex size-14 items-center justify-center rounded-full bg-brand-700 text-white shadow-xl shadow-brand-900/30"
-          onClick={() => setAdding('search')}
-          aria-label="Add book"
-        >
-          <Plus size={24} />
-        </button>
-      </div>
+      {!selecting && (
+        <div className="fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-30 flex flex-col items-end gap-3 sm:hidden">
+          <button className="glass flex size-12 items-center justify-center rounded-full shadow-lg" onClick={() => setAdding('photo')} aria-label="Add from photo">
+            <Camera size={20} />
+          </button>
+          <button
+            className="flex size-14 items-center justify-center rounded-full bg-brand-700 text-white shadow-xl shadow-brand-900/30"
+            onClick={() => setAdding('search')}
+            aria-label="Add book"
+          >
+            <Plus size={24} />
+          </button>
+        </div>
+      )}
+
+      {/* Changes for several books at once */}
+      {selecting && (
+        <div className="animate-rise fixed inset-x-0 bottom-0 z-40 border-t border-zinc-900/10 bg-white/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-2xl backdrop-blur dark:border-white/10 dark:bg-zinc-900/95">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold tabular-nums">{picked.size} selected</span>
+            <button className="btn-ghost px-2.5 py-1.5" onClick={() => setPicked(new Set(visible.map((b) => b.id)))}>
+              Select all {visible.length}
+            </button>
+            {picked.size > 0 && (
+              <button className="btn-ghost px-2.5 py-1.5" onClick={() => setPicked(new Set())}>
+                Clear
+              </button>
+            )}
+            <button className="btn-primary ml-auto px-4 py-1.5 sm:order-last sm:ml-0" onClick={stopSelecting}>
+              Done
+            </button>
+            <div className="grid w-full grid-cols-3 gap-2 sm:ml-auto sm:flex sm:w-auto">
+              <CategorySelect
+                placeholder="Category…"
+                label="Set category"
+                value={null}
+                used={used}
+                noneLabel="Remove category"
+                disabled={!picked.size}
+                className="min-w-0 px-2.5 sm:w-44 sm:px-3.5"
+                onChange={(category) =>
+                  bulk({ category }, (n) => (category ? `Filed ${n} under “${category}”` : `Removed the category from ${n}`))
+                }
+              />
+              <select
+                className="field min-w-0 px-2.5 py-2 sm:w-40 sm:px-3.5"
+                aria-label="Set language"
+                value=""
+                disabled={!picked.size}
+                onChange={(e) => {
+                  const language = e.target.value === NONE ? null : e.target.value
+                  bulk({ language }, (n) => (language ? `Set ${n} to ${languageName(language)}` : `Removed the language from ${n}`))
+                }}
+              >
+                <option value="" disabled hidden>
+                  Language…
+                </option>
+                {[...new Set([...LANGUAGE_CHOICES, ...languages])].map((c) => (
+                  <option key={c} value={c}>
+                    {languageName(c)}
+                  </option>
+                ))}
+                <option value={NONE}>Remove language</option>
+              </select>
+              <select
+                className="field min-w-0 px-2.5 py-2 sm:w-36 sm:px-3.5"
+                aria-label="Set status"
+                value=""
+                disabled={!picked.size}
+                onChange={(e) => {
+                  const status = e.target.value as ReadingStatus
+                  bulk({ status }, (n) => `Marked ${n} as ${STATUS_LABEL[status].toLowerCase()}`)
+                }}
+              >
+                <option value="" disabled hidden>
+                  Status…
+                </option>
+                {(Object.keys(STATUS_LABEL) as ReadingStatus[]).map((st) => (
+                  <option key={st} value={st}>
+                    {STATUS_LABEL[st]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast && (
-        <div className="animate-rise fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-zinc-900 px-5 py-3 text-sm font-medium text-white shadow-2xl dark:bg-white dark:text-zinc-900">
+        <div
+          className={`animate-rise fixed left-1/2 z-[60] -translate-x-1/2 rounded-full bg-zinc-900 px-5 py-3 text-sm font-medium text-white shadow-2xl dark:bg-white dark:text-zinc-900 ${
+            selecting ? 'bottom-36 sm:bottom-24' : 'bottom-6'
+          }`}
+        >
           {toast}
         </div>
       )}
@@ -384,6 +599,7 @@ export default function App() {
       {selected && store && (
         <BookDrawer
           book={selected}
+          usedCategories={used}
           onClose={() => setSelectedId(null)}
           onSave={async (b) => {
             await store.save(b)
@@ -394,6 +610,16 @@ export default function App() {
             setSelectedId(null)
             notify(`Removed “${b.title}”`)
           }}
+        />
+      )}
+      {organizing && store && (
+        <OrganizeDialog
+          books={all}
+          onSave={async (list, message) => {
+            await store.saveMany(list)
+            notify(message)
+          }}
+          onClose={() => setOrganizing(false)}
         />
       )}
       {showSignIn && <SignInDialog hasLocalBooks={!user && all.length > 0} onClose={() => setShowSignIn(false)} />}
@@ -407,14 +633,6 @@ export default function App() {
             await store?.saveMany(list.map((b) => ({ ...b, userId })))
           }}
           onFindCovers={() => fillCovers(all.filter((b) => !b.coverImageUrl))}
-          onGuessLanguages={async () => {
-            const updated = all
-              .filter((b) => !b.language)
-              .map((b) => ({ ...b, language: guessLanguage(b)?.code ?? null }))
-              .filter((b) => b.language)
-            if (updated.length) await store?.saveMany(updated)
-            return updated.length
-          }}
           onSignIn={() => {
             setShowSettings(false)
             setShowSignIn(true)

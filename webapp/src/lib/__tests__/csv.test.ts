@@ -58,9 +58,16 @@ describe('parseCsvText', () => {
   it('parses the bundled template', () => {
     const rows = parseCsvText(CSV_TEMPLATE)
     expect(rows).toHaveLength(3)
-    expect(rows[0]).toMatchObject({ title: 'The Hobbit', language: 'en', rating: 5, status: 'finished' })
-    expect(rows[1]).toMatchObject({ purchaseDateUnknown: true, purchaseDate: null, status: 'toRead' })
+    expect(rows[0]).toMatchObject({ title: 'The Hobbit', language: 'en', category: 'Science fiction & fantasy', rating: 5, status: 'finished' })
+    expect(rows[1]).toMatchObject({ category: 'Brazilian literature', purchaseDateUnknown: true, purchaseDate: null, status: 'toRead' })
     expect(rows[2]).toMatchObject({ isbn: '9780143127550', status: 'reading', line: 4 })
+  })
+
+  it('reads a category column under other names, but not Goodreads shelves', () => {
+    const rows = parseCsvText('Título;Gênero\nVidas Secas;Literatura brasileira')
+    expect(rows[0]).toMatchObject({ title: 'Vidas Secas', category: 'Literatura brasileira' })
+    const goodreads = parseCsvText('Title,Exclusive Shelf\nDune,read')
+    expect(goodreads[0].category).toBeUndefined()
   })
 
   it('handles Goodreads exports', () => {

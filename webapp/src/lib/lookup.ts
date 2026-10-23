@@ -1,7 +1,9 @@
 import type { BookMetadata } from '../types'
 import { settings } from './settings'
+import { fetchJson } from './http'
+import { appleSearch, brasilIsbnLookup, wikidataSearch } from './sources'
 
-// Open Library uses MARC (3-letter) language codes; normalise everything to ISO 639-1.
+// Library catalogs use MARC (3-letter) language codes; normalise everything to ISO 639-1.
 const MARC_TO_ISO: Record<string, string> = {
   eng: 'en', por: 'pt', spa: 'es', fre: 'fr', fra: 'fr', ger: 'de', deu: 'de', ita: 'it', jpn: 'ja',
   rus: 'ru', chi: 'zh', zho: 'zh', dut: 'nl', nld: 'nl', swe: 'sv', dan: 'da', nor: 'no', fin: 'fi',
@@ -24,22 +26,13 @@ export function languageName(code?: string | null): string {
   }
 }
 
+/** Languages offered first when choosing one. */
+export const LANGUAGE_CHOICES = ['en', 'pt', 'es', 'fr', 'de', 'it', 'ja', 'zh', 'ru', 'nl']
+
 export function cleanIsbn(s?: string | null): string | null {
   if (!s) return null
   const c = s.replace(/[^0-9Xx]/g, '').toUpperCase()
   return c.length === 10 || c.length === 13 ? c : null
-}
-
-async function fetchJson(url: string, tries = 3): Promise<any> {
-  for (let i = 0; ; i++) {
-    const res = await fetch(url)
-    if (res.ok) return res.json()
-    if (res.status === 429 && i < tries - 1) {
-      await new Promise((r) => setTimeout(r, 800 * 2 ** i))
-      continue
-    }
-    throw new Error(`${new URL(url).host} responded ${res.status}`)
-  }
 }
 
 // ---------- Google Books ----------
@@ -62,7 +55,6 @@ export function parseGoogleVolume(item: any): BookMetadata | null {
     coverImageUrl: img ? img.replace(/^http:/, 'https:').replace('&edge=curl', '') : null,
     pageCount: v.pageCount || null,
     categories: v.categories ?? null,
-    language: normalizeLanguage(v.language),
   }
 }
 
@@ -75,7 +67,7 @@ async function googleSearch(q: string, max = 8): Promise<BookMetadata[]> {
 
 // ---------- Open Library ----------
 
-const OL_FIELDS = 'key,title,subtitle,author_name,first_publish_year,isbn,publisher,number_of_pages_median,subject,language,cover_i'
+const OL_FIELDS = 'key,title,subtitle,author_name,first_publish_year,isbn,publisher,number_of_pages_median,subject,cover_i'
 
 export function parseOpenLibraryDoc(d: any): BookMetadata | null {
   if (!d?.title) return null
@@ -93,7 +85,6 @@ export function parseOpenLibraryDoc(d: any): BookMetadata | null {
     coverImageUrl: d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-L.jpg` : null,
     pageCount: d.number_of_pages_median ?? null,
     categories: d.subject?.slice(0, 5) ?? null,
-    language: normalizeLanguage(d.language?.[0]),
   }
 }
 
@@ -107,10 +98,16 @@ async function openLibrarySearch(params: Record<string, string>, limit = 8): Pro
 
 const norm = (s?: string | null) => (s ?? '').toLowerCase().normalize('NFD').replace(/[^a-z0-9]/g, '')
 
-/** Merges results from both sources, de-duplicating and filling gaps (e.g. covers, descriptions). */
+/**
+ * Merges results from several sources, taking them round-robin so every source is
+ * represented near the top, de-duplicating and filling gaps (covers, descriptions…).
+ */
 export function mergeResults(lists: BookMetadata[][]): BookMetadata[] {
   const out: BookMetadata[] = []
-  for (const item of lists.flat()) {
+  const longest = Math.max(0, ...lists.map((l) => l.length))
+  const interleaved: BookMetadata[] = []
+  for (let i = 0; i < longest; i++) for (const l of lists) if (l[i]) interleaved.push(l[i])
+  for (const item of interleaved) {
     const dup = out.find(
       (o) =>
         (o.isbn && item.isbn && o.isbn === item.isbn) ||
@@ -134,31 +131,35 @@ export interface LookupQuery {
   isbn?: string
 }
 
-/** Searches Google Books and Open Library in parallel. Fails only if both fail. */
-export async function searchBooks(q: LookupQuery, max = 8): Promise<BookMetadata[]> {
+/**
+ * Searches every source in parallel: Google Books, Open Library, Apple Books and
+ * Wikidata by text, plus the Brazilian ISBN registry by ISBN. Fails only if all fail.
+ */
+export async function searchBooks(q: LookupQuery, max = 10): Promise<BookMetadata[]> {
   const isbn = cleanIsbn(q.isbn ?? (q.text && /^[\d\s-]{10,17}[xX]?$/.test(q.text.trim()) ? q.text : undefined))
-  let google: string
-  let ol: Record<string, string>
+  const text = [q.title, q.author].filter(Boolean).join(' ') || q.text?.trim() || ''
+  let searches: Promise<BookMetadata[]>[]
   if (isbn) {
-    google = `isbn:${isbn}`
-    ol = { isbn }
+    searches = [googleSearch(`isbn:${isbn}`, max), brasilIsbnLookup(isbn), openLibrarySearch({ isbn }, max)]
   } else if (q.title) {
-    google = `intitle:${q.title}${q.author ? ` inauthor:${q.author}` : ''}`
-    ol = q.author ? { title: q.title, author: q.author } : { title: q.title }
+    searches = [
+      googleSearch(`intitle:${q.title}${q.author ? ` inauthor:${q.author}` : ''}`, max),
+      openLibrarySearch(q.author ? { title: q.title, author: q.author } : { title: q.title }, max),
+      appleSearch(text, 6),
+      wikidataSearch(q.title, 4),
+    ]
   } else {
-    google = q.text?.trim() ?? ''
-    ol = { q: google }
+    if (!text) return []
+    searches = [googleSearch(text, max), openLibrarySearch({ q: text }, max), appleSearch(text, 6), wikidataSearch(text, 4)]
   }
-  if (!google) return []
-  const settled = await Promise.allSettled([googleSearch(google, max), openLibrarySearch(ol, max)])
+  const settled = await Promise.allSettled(searches)
   const ok = settled.filter((s): s is PromiseFulfilledResult<BookMetadata[]> => s.status === 'fulfilled')
   if (!ok.length) throw (settled[0] as PromiseRejectedResult).reason
   const merged = mergeResults(ok.map((s) => s.value))
   // A title+author search that found nothing may just be too strict; retry loosely.
-  if (!merged.length && q.title) return searchBooks({ text: [q.title, q.author].filter(Boolean).join(' ') }, max)
+  if (!merged.length && q.title) return searchBooks({ text }, max)
   return merged.slice(0, max)
 }
-
 
 const COMMON = ['en', 'pt', 'es', 'fr', 'de', 'it', 'ja', 'zh', 'ru', 'nl', 'sv', 'pl', 'ko', 'ar', 'he', 'el', 'tr', 'ca', 'la']
 

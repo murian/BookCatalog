@@ -23,7 +23,10 @@ export interface Book {
   description?: string | null
   coverImageUrl?: string | null
   pageCount?: number | null
+  /** Subjects listed by the book databases, e.g. "Fiction / Science Fiction". */
   categories?: string[] | null
+  /** The one category the user files the book under, i.e. its section of the shelf. */
+  category?: string | null
   language?: string | null
   purchaseDate?: string | null // ISO date
   purchaseDateUnknown?: boolean
@@ -40,10 +43,12 @@ export interface Book {
 /** Book metadata found online, before the personal fields are filled in. */
 export type BookMetadata = Pick<
   Book,
-  'title' | 'author' | 'isbn' | 'publisher' | 'publishedDate' | 'description' | 'coverImageUrl' | 'pageCount' | 'categories' | 'language'
-> & { source: 'Google Books' | 'Open Library' | 'Manual'; sourceId?: string }
+  'title' | 'author' | 'isbn' | 'publisher' | 'publishedDate' | 'description' | 'coverImageUrl' | 'pageCount' | 'categories'
+> & { source: BookSource; sourceId?: string }
+
+export type BookSource = 'Google Books' | 'Open Library' | 'Apple Books' | 'Wikidata' | 'ISBN Brasil' | 'Manual'
 
 export type PersonalFields = Pick<
   Book,
-  'purchaseDate' | 'purchaseDateUnknown' | 'startReadingDate' | 'finishReadingDate' | 'status' | 'rating' | 'notes' | 'format' | 'language'
+  'purchaseDate' | 'purchaseDateUnknown' | 'startReadingDate' | 'finishReadingDate' | 'status' | 'rating' | 'notes' | 'format' | 'language' | 'category'
 >
