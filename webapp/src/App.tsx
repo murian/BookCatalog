@@ -389,7 +389,9 @@ export default function App() {
                         key={b.id}
                         onClick={() => open(b)}
                         aria-pressed={selecting ? on : undefined}
-                        className="group animate-rise text-left"
+                        // A column, so covers line up at the top even when a neighbour has a longer title or a badge
+                        // (a button would otherwise centre its content vertically in the row).
+                        className="group animate-rise flex flex-col text-left"
                         style={{ animationDelay: `${Math.min(i, 24) * 20}ms` }}
                       >
                         <div className="relative transition duration-300 group-hover:-translate-y-1.5 group-hover:rotate-[-0.5deg]">
@@ -656,7 +658,12 @@ function EmptyState({ onAdd }: { onAdd: (t: AddTab) => void }) {
       <p className="mt-2 text-zinc-500">Add your first book. Details and covers are fetched automatically.</p>
       <div className="mx-auto mt-8 grid max-w-3xl gap-3 sm:grid-cols-3">
         {options.map(({ tab, icon: Icon, title, text }, i) => (
-          <button key={tab} onClick={() => onAdd(tab)} className="glass animate-rise group rounded-3xl p-6 text-left transition hover:-translate-y-1" style={{ animationDelay: `${i * 60}ms` }}>
+          <button
+            key={tab}
+            onClick={() => onAdd(tab)}
+            className="glass animate-rise group flex flex-col rounded-3xl p-6 text-left transition hover:-translate-y-1"
+            style={{ animationDelay: `${i * 60}ms` }}
+          >
             <div className="flex size-11 items-center justify-center rounded-2xl bg-brand-700 text-white shadow-lg shadow-brand-900/25 transition group-hover:scale-110">
               <Icon size={20} />
             </div>
