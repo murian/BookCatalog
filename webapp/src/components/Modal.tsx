@@ -1,9 +1,37 @@
 import { X } from 'lucide-react'
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
-// Open modals, newest last: Escape only closes the one on top.
+// Open layers (modals, the book viewer), newest last: Escape only closes the one on top.
 const stack: symbol[] = []
+let scrollLocks = 0
+
+/** Calls onEscape when Escape is pressed while this layer is the top-most one. */
+export function useEscape(onEscape: () => void) {
+  const latest = useRef(onEscape)
+  latest.current = onEscape
+  useEffect(() => {
+    const id = Symbol()
+    stack.push(id)
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && stack.at(-1) === id && latest.current()
+    window.addEventListener('keydown', onKey)
+    return () => {
+      stack.splice(stack.indexOf(id), 1)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [])
+}
+
+/** Stops the page behind an overlay from scrolling, until every overlay has closed. */
+export function useScrollLock() {
+  useEffect(() => {
+    scrollLocks++
+    document.body.style.overflow = 'hidden'
+    return () => {
+      if (--scrollLocks === 0) document.body.style.overflow = ''
+    }
+  }, [])
+}
 
 export function Modal({
   title,
@@ -16,18 +44,8 @@ export function Modal({
   children: ReactNode
   wide?: boolean
 }) {
-  useEffect(() => {
-    const id = Symbol()
-    stack.push(id)
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && stack.at(-1) === id && onClose()
-    window.addEventListener('keydown', onKey)
-    document.body.style.overflow = 'hidden'
-    return () => {
-      stack.splice(stack.indexOf(id), 1)
-      window.removeEventListener('keydown', onKey)
-      if (!stack.length) document.body.style.overflow = ''
-    }
-  }, [onClose])
+  useEscape(onClose)
+  useScrollLock()
 
   return createPortal(
     <div className="animate-fade fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center sm:p-6" onMouseDown={onClose}>
