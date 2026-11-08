@@ -121,30 +121,183 @@ body {
 .animate-fade {
   animation: fade 0.2s ease-out both;
 }
-@keyframes slide-in {
-  from {
-    transform: translateX(100%);
-  }
-}
-.animate-slide-in {
-  animation: slide-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-@media (max-width: 639px) {
-  @keyframes slide-up {
-    from {
-      transform: translateY(100%);
-    }
-  }
-  .animate-slide-in {
-    animation-name: slide-up;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* ---------- The 3D book in the book viewer ---------- */
+.book3d-stage {
+  --w: 150px;
+}
+@media (min-width: 768px) {
+  .book3d-stage {
+    --w: 260px;
+  }
+}
+@keyframes book-float {
+  50% {
+    transform: translateY(calc(var(--w) * -0.04));
+  }
+}
+@keyframes book-shadow {
+  50% {
+    transform: scale(0.85);
+  }
+}
+.book3d-float {
+  perspective: calc(var(--w) * 5.5);
+  animation: book-float 6s ease-in-out 0.8s infinite;
+}
+.book3d-shadow {
+  width: calc(var(--w) * 1.1);
+  height: calc(var(--w) * 0.14);
+  margin-top: calc(var(--w) * 0.1);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(0 0 0 / 0.55), transparent);
+  animation:
+    fade 0.5s ease-out 0.35s both,
+    book-shadow 6s ease-in-out 0.8s infinite;
+}
+.is-leaving .book3d-float {
+  animation: none;
+}
+.is-leaving .book3d-shadow {
+  animation: none;
+  opacity: 0;
+}
+.book3d {
+  --h: calc(var(--w) * 1.5);
+  --t: calc(var(--w) * var(--depth, 0.1));
+  position: relative;
+  width: var(--w);
+  height: var(--h);
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform;
+  cursor: pointer;
+  outline: none;
+}
+.book3d:focus-visible .book3d-front {
+  outline: 3px solid var(--color-brass-400);
+  outline-offset: 4px;
+}
+.book3d-face {
+  position: absolute;
+  backface-visibility: hidden;
+}
+.book3d-front,
+.book3d-back {
+  inset: 0;
+  overflow: hidden;
+}
+.book3d-front {
+  border-radius: 2px 6px 6px 2px;
+  transform: translateZ(calc(var(--t) / 2));
+}
+.book3d-back {
+  border-radius: 6px 2px 2px 6px;
+  transform: rotateY(180deg) translateZ(calc(var(--t) / 2));
+  /* A zoomed-in patch of the cover art, so the back has its colours but not its lettering. */
+  background-size: 320%;
+  background-position: 75% 20%;
+}
+/* Light from the top left, and the groove where the cover hinges. */
+.book3d-front::after,
+.book3d-back::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgb(0 0 0 / 0.32), rgb(255 255 255 / 0.22) 1.8%, rgb(0 0 0 / 0.16) 3.6%, transparent 8%),
+    linear-gradient(125deg, rgb(255 255 255 / 0.2), transparent 35%, transparent 70%, rgb(0 0 0 / 0.18));
+}
+.book3d-back::after {
+  transform: scaleX(-1);
+}
+.book3d-spine {
+  top: 0;
+  left: calc(50% - var(--t) / 2);
+  width: var(--t);
+  height: 100%;
+  overflow: hidden;
+  border-radius: 2px;
+  transform: rotateY(-90deg) translateZ(calc(var(--w) / 2));
+  background-size: var(--w) var(--h);
+  background-position: left center;
+}
+.book3d-spine::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgb(0 0 0 / 0.5), rgb(0 0 0 / 0.12) 30%, rgb(255 255 255 / 0.12) 55%, rgb(0 0 0 / 0.45));
+}
+.book3d-spine-title {
+  position: relative;
+  display: block;
+  height: 100%;
+  padding: calc(var(--w) * 0.08) 0;
+  overflow: hidden;
+  writing-mode: vertical-rl;
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  line-height: var(--t);
+  font-family: var(--font-display);
+  font-size: calc(var(--t) * 0.42);
+  font-weight: 600;
+  color: var(--color-brass-100);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.7);
+}
+/* The paper: the page edges, a little inside the covers. */
+.book3d-edge,
+.book3d-top,
+.book3d-bottom {
+  box-shadow: inset 0 0 calc(var(--t) * 0.3) rgb(70 55 30 / 0.35);
+}
+.book3d-edge {
+  top: 3px;
+  left: calc(50% - var(--t) / 2 + 1px);
+  width: calc(var(--t) - 2px);
+  height: calc(100% - 6px);
+  transform: rotateY(90deg) translateZ(calc(var(--w) / 2 - 3px));
+  background: repeating-linear-gradient(90deg, #f7f2e8 0 1.5px, #e3dbc7 1.5px 2.5px);
+}
+.book3d-top,
+.book3d-bottom {
+  left: 0;
+  top: calc(50% - var(--t) / 2 + 1px);
+  width: calc(100% - 3px);
+  height: calc(var(--t) - 2px);
+  background: repeating-linear-gradient(0deg, #f7f2e8 0 1.5px, #e3dbc7 1.5px 2.5px);
+}
+.book3d-top {
+  transform: rotateX(90deg) translateZ(calc(var(--h) / 2 - 3px));
+}
+.book3d-bottom {
+  transform: rotateX(-90deg) translateZ(calc(var(--h) / 2 - 3px));
+}
+.book3d-blurb {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6em;
+  padding: 10% 12% 9% 9%;
+  background: rgb(12 20 16 / 0.86);
+  color: #ded7c6;
+  font-size: calc(var(--w) * 0.042);
+  line-height: 1.5;
+}
+.book3d-blurb-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 13;
+  overflow: hidden;
 }
 
 /* Printing the shelf plan: only the plan, on plain paper. */

@@ -12,7 +12,7 @@ import { autoCover } from './lib/covers'
 import { Cover } from './components/Cover'
 import { Logo } from './components/Logo'
 import { AddBookDialog } from './components/AddBookDialog'
-import { BookDrawer } from './components/BookDrawer'
+import { BookViewer } from './components/BookViewer'
 import { CategorySelect } from './components/CategorySelect'
 import { OrganizeDialog } from './components/OrganizeDialog'
 import { SettingsDialog } from './components/SettingsDialog'
@@ -51,6 +51,8 @@ export default function App() {
   const [cat, setCat] = useState('')
   const [view, setView] = useState<'grid' | 'list'>('grid')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  // The cover that was clicked, for the opened book to fly out of.
+  const [origin, setOrigin] = useState<HTMLElement | null>(null)
   const [selecting, setSelecting] = useState(false)
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set())
   const [adding, setAdding] = useState<AddTab | null>(null)
@@ -147,8 +149,11 @@ export default function App() {
   const counts = (f: Filter) => (f === 'all' ? all.length : all.filter((b) => b.status === f).length)
   const greeting = ['Good night', 'Good morning', 'Good afternoon', 'Good evening'][Math.floor(((new Date().getHours() + 18) % 24) / 6) % 4]
 
-  const open = (b: Book) => {
-    if (!selecting) return setSelectedId(b.id)
+  const open = (b: Book, card: Element) => {
+    if (!selecting) {
+      setOrigin(card.querySelector<HTMLElement>('[data-cover]'))
+      return setSelectedId(b.id)
+    }
     const next = new Set(picked)
     if (!next.delete(b.id)) next.add(b.id)
     setPicked(next)
@@ -278,7 +283,7 @@ export default function App() {
                 return (
                   <button
                     key={b.id}
-                    onClick={() => open(b)}
+                    onClick={(e) => open(b, e.currentTarget)}
                     aria-pressed={selecting ? picked.has(b.id) : undefined}
                     className={`glass flex w-72 shrink-0 items-center gap-4 rounded-2xl p-3 text-left transition hover:-translate-y-0.5 ${
                       selecting && picked.has(b.id) ? 'ring-2 ring-brand-600 dark:ring-brass-400' : ''
@@ -387,7 +392,7 @@ export default function App() {
                     return (
                       <button
                         key={b.id}
-                        onClick={() => open(b)}
+                        onClick={(e) => open(b, e.currentTarget)}
                         aria-pressed={selecting ? on : undefined}
                         // A column, so covers line up at the top even when a neighbour has a longer title or a badge
                         // (a button would otherwise centre its content vertically in the row).
@@ -457,7 +462,7 @@ export default function App() {
                       {sec.books.map((b) => (
                         <tr
                           key={b.id}
-                          onClick={() => open(b)}
+                          onClick={(e) => open(b, e.currentTarget)}
                           aria-selected={selecting ? picked.has(b.id) : undefined}
                           className={`cursor-pointer border-b border-zinc-900/5 last:border-0 hover:bg-zinc-900/[0.03] dark:border-white/5 dark:hover:bg-white/[0.03] ${
                             selecting && picked.has(b.id) ? 'bg-brand-700/10 dark:bg-brass-400/10' : ''
@@ -599,8 +604,10 @@ export default function App() {
 
       {adding && <AddBookDialog userId={userId} existing={all} initialTab={adding} onAdd={addBooks} onClose={() => setAdding(null)} />}
       {selected && store && (
-        <BookDrawer
+        <BookViewer
+          key={selected.id}
           book={selected}
+          origin={origin}
           usedCategories={used}
           onClose={() => setSelectedId(null)}
           onSave={async (b) => {
