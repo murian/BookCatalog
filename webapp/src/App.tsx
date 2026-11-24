@@ -4,7 +4,7 @@ import type { Book, ReadingStatus } from './types'
 import { STATUS_LABEL } from './types'
 import { useAuth } from './lib/useAuth'
 import { clearLocalBooks, cloudStore, localStore, readLocalBooks, type BookStore } from './lib/store'
-import { formatDate, sortBooks, stats, type SortKey } from './lib/books'
+import { addedWhen, formatDate, lastImport, sortBooks, stats, type SortKey } from './lib/books'
 import { LANGUAGE_CHOICES, languageName } from './lib/lookup'
 import { groupByCategory, usedCategories, type Section } from './lib/categories'
 import { settings } from './lib/settings'
@@ -83,7 +83,9 @@ export default function App() {
 
   const addBooks = async (list: Book[]) => {
     if (!store) return
-    const saved = list.map((b) => ({ ...b, userId }))
+    // A millisecond apart: the list keeps its order and reads as one import.
+    const start = Date.now()
+    const saved = list.map((b, i) => ({ ...b, userId, dateAdded: new Date(start + i).toISOString() }))
     await store.saveMany(saved)
     notify(list.length === 1 ? `Added “${list[0].title}”` : `Added ${list.length} books`)
     // Look for covers in the background for anything the lookup couldn't illustrate.
@@ -129,6 +131,7 @@ export default function App() {
   const langFilter = lang === NONE || languages.includes(lang) ? lang : ''
   const catFilter = cat === NONE || used.includes(cat) ? cat : ''
   const reading = all.filter((b) => b.status === 'reading')
+  const recent = useMemo(() => lastImport(all), [all])
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return all.filter(
@@ -302,6 +305,54 @@ export default function App() {
           </section>
         )}
 
+        {/* The last import: the book just added, or the whole list from a CSV */}
+        {recent.length > 0 && recent.length < all.length && filter === 'all' && !query && (
+          <section className="mb-8">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="label">
+                Recently added{' '}
+                <span className="font-normal tracking-normal normal-case">
+                  · {recent.length === 1 ? '1 book' : `${recent.length} books`}, {addedWhen(recent[0].dateAdded)}
+                </span>
+              </h2>
+              {recent.length > 1 && !selecting && (
+                <button
+                  className="shrink-0 text-xs font-medium text-brand-700 hover:underline dark:text-brass-300"
+                  onClick={() => {
+                    setSelecting(true)
+                    setPicked(new Set(recent.map((b) => b.id)))
+                  }}
+                >
+                  Select these
+                </button>
+              )}
+            </div>
+            <div className="scrollbar-none -mx-4 flex gap-4 overflow-x-auto px-4 pt-1 pb-2 sm:mx-0 sm:px-0">
+              {recent.map((b) => {
+                const on = selecting && picked.has(b.id)
+                return (
+                  <button
+                    key={b.id}
+                    onClick={(e) => open(b, e.currentTarget)}
+                    aria-pressed={selecting ? on : undefined}
+                    className="group flex w-24 shrink-0 flex-col text-left"
+                  >
+                    <Cover
+                      title={b.title}
+                      author={b.author}
+                      url={b.coverImageUrl}
+                      isbn={b.isbn}
+                      className={`w-24 transition group-hover:-translate-y-1 ${on ? 'ring-4 ring-brand-600 dark:ring-brass-400' : ''}`}
+                    />
+                    <p className="mt-2 line-clamp-2 text-xs leading-snug font-medium">{b.title}</p>
+                    <p className="truncate text-[11px] text-zinc-500">{b.author}</p>
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+        )}
+
         {/* Controls: the filters wrap onto their own line when they don't fit beside the chips. */}
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <div className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
@@ -339,7 +390,7 @@ export default function App() {
               </select>
             )}
             <select className={FILTER} value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="Sort">
-              <option value="added">Recently added</option>
+              <option value="added">Date added</option>
               <option value="title">Title</option>
               <option value="author">Author</option>
               <option value="category">Category</option>
