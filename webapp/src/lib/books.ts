@@ -68,6 +68,34 @@ export function stats(books: Book[]) {
   }
 }
 
+// Books saved in one go (one book, or a whole CSV) are stamped a millisecond apart, and older imports
+// were saved in one quick loop; separate additions, however quick, are much further apart than this.
+const SAME_IMPORT_MS = 50
+
+/** The books added most recently in one go: a single book or a whole list, in the order they were added. */
+export function lastImport(books: Book[]): Book[] {
+  const dated = books
+    .map((b) => ({ b, t: Date.parse(b.dateAdded) }))
+    .filter(({ t }) => !Number.isNaN(t))
+    .sort((x, y) => y.t - x.t)
+  const batch = dated.slice(0, 1)
+  for (const item of dated.slice(1)) {
+    if (batch[batch.length - 1].t - item.t > SAME_IMPORT_MS) break
+    batch.push(item)
+  }
+  return batch.reverse().map(({ b }) => b)
+}
+
+/** "today", "yesterday", "3 days ago" or "on Nov 2, 2026". */
+export function addedWhen(iso: string, now = new Date()): string {
+  const day = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const days = Math.round((day(now) - day(new Date(iso))) / 86_400_000)
+  if (days <= 0) return 'today'
+  if (days === 1) return 'yesterday'
+  if (days < 7) return `${days} days ago`
+  return `on ${formatDate(iso)}`
+}
+
 /** Days between start and finish, when both are known. */
 export function readingDays(b: Book): number | null {
   if (!b.startReadingDate || !b.finishReadingDate) return null
