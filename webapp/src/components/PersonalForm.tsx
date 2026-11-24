@@ -3,24 +3,26 @@ import type { ReactNode } from 'react'
 import type { BookFormat, PersonalFields, ReadingStatus } from '../types'
 import { STATUS_LABEL } from '../types'
 import { dateInput } from '../lib/books'
-import { LANGUAGE_CHOICES, languageName } from '../lib/lookup'
 import { CategorySelect } from './CategorySelect'
+import { LanguageSelect } from './LanguageSelect'
 
 export function PersonalForm({
   value,
   onChange,
   usedCategories,
+  usedLanguages,
   categoryHint,
 }: {
   value: PersonalFields
   onChange: (v: PersonalFields) => void
   /** The user's own categories, offered alongside the built-in ones. */
   usedCategories?: string[]
+  /** Languages already on the user's books, offered first. */
+  usedLanguages?: string[]
   /** Shown under the category, e.g. a suggestion to apply. */
   categoryHint?: ReactNode
 }) {
   const set = <K extends keyof PersonalFields>(k: K, v: PersonalFields[K]) => onChange({ ...value, [k]: v })
-  const lang = value.language ?? ''
 
   // Picking dates nudges the status forward, like you'd expect.
   const setStarted = (d: string) =>
@@ -57,14 +59,7 @@ export function PersonalForm({
       <div className="grid grid-cols-2 gap-3">
         <label>
           <span className="label">Language</span>
-          <select className="field" value={lang} onChange={(e) => set('language', e.target.value || null)}>
-            <option value="">—</option>
-            {[...new Set([...LANGUAGE_CHOICES, ...(lang ? [lang] : [])])].map((c) => (
-              <option key={c} value={c}>
-                {languageName(c)}
-              </option>
-            ))}
-          </select>
+          <LanguageSelect value={value.language ?? null} onChange={(l) => set('language', l)} used={usedLanguages} />
         </label>
         <label>
           <span className="label">Format</span>

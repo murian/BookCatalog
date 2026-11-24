@@ -12,7 +12,7 @@ A fast web app to catalog your books. It runs entirely in the browser and is hos
   - **Categories** reviews a suggestion for every book; the confident ones are ticked.
   - **Shelf plan** is the order to put the books on your real shelves: sections in order (move or rename them), and books by author surname inside each, as in a library ("Assis, Machado de"). Tick books off as you shelve them, or print the plan as a checklist.
 - **Edit many books at once**: tap **Select**, pick books (or filter and **Select all**), then set their category, language or status. Use it to fix or remove wrong languages in one go.
-- **Language** is only ever what you set. It's never guessed, because online records often describe a different edition from yours.
+- **Language** is only ever what you set, from every European language, regional ones such as Catalan, Galician, Basque and Welsh included, plus others common on bookshelves. The languages already in your library are listed first. It's never guessed, because online records often describe a different edition from yours.
 - **Import a CSV** with many titles. Each row is looked up online, and you can review and pick the right edition before adding. Duplicates are detected. Goodreads exports work, and so do Portuguese and Spanish column names.
 - **Review mark**: every book you add starts as **Needs review** until you mark it reviewed, from the book's view (**Mark as reviewed**), its edit form, or for many books at once with **Select**. Filter the library by **Needs review** to work through them.
 - **Recently added** shows your last import: the book you just added, or the whole list from a CSV, in file order. **Select these** picks them all, to set their category, language or status in one go.
@@ -32,7 +32,7 @@ The Hobbit,J.R.R. Tolkien,,en,Science fiction & fantasy,2021-03-14,2021-04-01,20
 Dom Casmurro,Machado de Assis,,Portuguese,Brazilian literature,unknown,,,to read,,
 ```
 
-A plain list with one title per line (optionally `title,author`) also works. Dates can be `YYYY-MM-DD`, `DD/MM/YYYY`, `YYYY-MM` or `YYYY`. Use `unknown` for a purchase date you don't remember. The category column may also be called `genre` or `categoria`, and can hold your own category names. A `reviewed` column (`yes`/`no`, or `sim`/`não`) marks books as already reviewed; without it, imported books need review.
+A plain list with one title per line (optionally `title,author`) also works. Dates can be `YYYY-MM-DD`, `DD/MM/YYYY`, `YYYY-MM` or `YYYY`. Use `unknown` for a purchase date you don't remember. The category column may also be called `genre` or `categoria`, and can hold your own category names. The language can be a code (`ca`) or a name, in English, Portuguese, Spanish, French, German, Italian or the language itself (`Catalan`, `Catalão`, `Català`). A `reviewed` column (`yes`/`no`, or `sim`/`não`) marks books as already reviewed; without it, imported books need review.
 
 ## Development
 
