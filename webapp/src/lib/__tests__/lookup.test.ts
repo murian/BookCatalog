@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cleanIsbn, languageCode, mergeResults, normalizeLanguage, parseGoogleVolume, parseOpenLibraryDoc } from '../lookup'
+import { cleanIsbn, LANGUAGES, languageCode, languageName, mergeResults, normalizeLanguage, parseGoogleVolume, parseOpenLibraryDoc } from '../lookup'
 import { pickTitleLines } from '../photo'
 
 const google = {
@@ -73,6 +73,29 @@ describe('helpers', () => {
     expect(languageCode('Português')).toBe('pt')
     expect(languageCode('Español')).toBe('es')
     expect(languageCode('Klingon')).toBeNull()
+  })
+  it('knows every European language, by any of its names', () => {
+    // The 24 official languages of the EU, plus Catalan, Galician and Basque.
+    const eu = ['bg', 'hr', 'cs', 'da', 'nl', 'en', 'et', 'fi', 'fr', 'de', 'el', 'hu', 'ga', 'it', 'lv', 'lt', 'mt', 'pl', 'pt', 'ro', 'sk', 'sl', 'es', 'sv']
+    for (const c of [...eu, 'ca', 'gl', 'eu']) expect(LANGUAGES).toContain(c)
+    // Every one shows a real name, not a bare code.
+    for (const c of LANGUAGES) expect(languageName(c).toLowerCase()).not.toBe(c)
+    expect(new Set(LANGUAGES).size).toBe(LANGUAGES.length)
+
+    expect(languageCode('Catalan')).toBe('ca')
+    expect(languageCode('Català')).toBe('ca')
+    expect(languageCode('Catalão')).toBe('ca')
+    expect(languageCode('cat')).toBe('ca')
+    expect(languageCode('Galego')).toBe('gl')
+    expect(languageCode('Basco')).toBe('eu')
+    expect(languageCode('Euskara')).toBe('eu')
+    expect(languageCode('Cymraeg')).toBe('cy')
+    expect(languageCode('Íslenska')).toBe('is')
+    expect(languageCode('Ucraniano')).toBe('uk')
+    expect(languageCode('euskara')).toBe('eu')
+    expect(languageCode('Русский')).toBe('ru')
+    expect(languageCode('Ελληνικά')).toBe('el')
+    expect(languageCode('Lëtzebuergesch')).toBe('lb')
   })
   it('picks the largest confident cover lines', () => {
     const q = pickTitleLines([

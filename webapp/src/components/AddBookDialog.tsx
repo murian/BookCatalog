@@ -6,7 +6,7 @@ import { Cover } from './Cover'
 import { PersonalForm } from './PersonalForm'
 import { CoverPicker } from './CoverPicker'
 import { SuggestionHint } from './CategorySelect'
-import { searchBooks } from '../lib/lookup'
+import { searchBooks, usedLanguages } from '../lib/lookup'
 import { identifyFromPhoto } from '../lib/photo'
 import { parseCsvText, CSV_TEMPLATE, type CsvRow } from '../lib/csv'
 import { defaultPersonal, makeBook } from '../lib/books'
@@ -46,6 +46,7 @@ export function AddBookDialog({ userId, existing, initialTab = 'search', onAdd, 
           meta={picked}
           duplicate={findDuplicate(existing, picked)}
           used={usedCategories(existing)}
+          languages={usedLanguages(existing)}
           onBack={() => setPicked(null)}
           onSave={async (meta, personal) => {
             await onAdd([makeBook(meta, personal, userId)])
@@ -243,12 +244,14 @@ function ConfirmStep({
   meta,
   duplicate,
   used,
+  languages,
   onBack,
   onSave,
 }: {
   meta: BookMetadata
   duplicate?: Book
   used: string[]
+  languages: string[]
   onBack: () => void
   onSave: (meta: BookMetadata, personal: PersonalFields) => Promise<void>
 }) {
@@ -323,6 +326,7 @@ function ConfirmStep({
         value={p}
         onChange={setP}
         usedCategories={used}
+        usedLanguages={languages}
         categoryHint={<SuggestionHint suggestion={offer} looking={looking && !p.category} onUse={() => offer && setP({ ...p, category: offer.name })} />}
       />
       {error && <p className="mt-4 text-sm text-rose-500">{error}</p>}

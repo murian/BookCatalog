@@ -5,7 +5,7 @@ import { STATUS_LABEL } from './types'
 import { useAuth } from './lib/useAuth'
 import { clearLocalBooks, cloudStore, localStore, readLocalBooks, type BookStore } from './lib/store'
 import { addedWhen, formatDate, lastImport, sortBooks, stats, type SortKey } from './lib/books'
-import { LANGUAGE_CHOICES, languageName } from './lib/lookup'
+import { languageName } from './lib/lookup'
 import { groupByCategory, usedCategories, type Section } from './lib/categories'
 import { settings } from './lib/settings'
 import { autoCover } from './lib/covers'
@@ -14,6 +14,7 @@ import { Logo } from './components/Logo'
 import { AddBookDialog } from './components/AddBookDialog'
 import { BookViewer } from './components/BookViewer'
 import { CategorySelect } from './components/CategorySelect'
+import { LanguageSelect } from './components/LanguageSelect'
 import { OrganizeDialog } from './components/OrganizeDialog'
 import { SettingsDialog } from './components/SettingsDialog'
 import { SignInDialog } from './components/SignInDialog'
@@ -613,26 +614,15 @@ export default function App() {
                   bulk({ category }, (n) => (category ? `Filed ${n} under “${category}”` : `Removed the category from ${n}`))
                 }
               />
-              <select
-                className="field min-w-0 px-2.5 py-2 sm:w-40 sm:px-3.5"
-                aria-label="Set language"
-                value=""
+              <LanguageSelect
+                placeholder="Language…"
+                label="Set language"
+                value={null}
+                used={languages}
                 disabled={!picked.size}
-                onChange={(e) => {
-                  const language = e.target.value === NONE ? null : e.target.value
-                  bulk({ language }, (n) => (language ? `Set ${n} to ${languageName(language)}` : `Removed the language from ${n}`))
-                }}
-              >
-                <option value="" disabled hidden>
-                  Language…
-                </option>
-                {[...new Set([...LANGUAGE_CHOICES, ...languages])].map((c) => (
-                  <option key={c} value={c}>
-                    {languageName(c)}
-                  </option>
-                ))}
-                <option value={NONE}>Remove language</option>
-              </select>
+                className="min-w-0 px-2.5 py-2 sm:w-40 sm:px-3.5"
+                onChange={(language) => bulk({ language }, (n) => (language ? `Set ${n} to ${languageName(language)}` : `Removed the language from ${n}`))}
+              />
               <select
                 className="field min-w-0 px-2.5 py-2 sm:w-36 sm:px-3.5"
                 aria-label="Set status"
@@ -690,6 +680,7 @@ export default function App() {
           book={selected}
           origin={origin}
           usedCategories={used}
+          usedLanguages={languages}
           onClose={() => setSelectedId(null)}
           onSave={async (b) => {
             await store.save(b)

@@ -3,11 +3,33 @@ import { settings } from './settings'
 import { fetchJson } from './http'
 import { appleSearch, brasilIsbnLookup, wikidataSearch } from './sources'
 
-// Library catalogs use MARC (3-letter) language codes; normalise everything to ISO 639-1.
+// Every European language, national and regional, then others common on bookshelves (ISO 639 codes;
+// three letters where a language has no two-letter code). Shown A–Z by name.
+export const LANGUAGES = [
+  // Romance
+  'pt', 'mwl', 'gl', 'es', 'ast', 'an', 'ca', 'oc', 'fr', 'wa', 'it', 'co', 'sc', 'fur', 'vec', 'scn', 'rm', 'ro', 'lad', 'la',
+  // Germanic
+  'en', 'sco', 'de', 'gsw', 'nds', 'lb', 'nl', 'li', 'fy', 'da', 'sv', 'no', 'nb', 'nn', 'is', 'fo', 'yi',
+  // Celtic
+  'ga', 'gd', 'gv', 'cy', 'kw', 'br',
+  // Slavic
+  'pl', 'csb', 'szl', 'cs', 'sk', 'hsb', 'dsb', 'sl', 'hr', 'bs', 'sr', 'cnr', 'mk', 'bg', 'ru', 'uk', 'be', 'rue',
+  // Baltic, Uralic and the rest of Europe
+  'lt', 'lv', 'et', 'fi', 'se', 'smn', 'sms', 'hu', 'el', 'sq', 'mt', 'eu', 'tr', 'ka', 'hy', 'az', 'tt', 'cv', 'rom', 'eo',
+  // Beyond Europe
+  'ja', 'zh', 'ko', 'ar', 'he', 'hi', 'fa',
+]
+
+// Library catalogs use MARC (3-letter) language codes; normalise to the codes above.
 const MARC_TO_ISO: Record<string, string> = {
-  eng: 'en', por: 'pt', spa: 'es', fre: 'fr', fra: 'fr', ger: 'de', deu: 'de', ita: 'it', jpn: 'ja',
-  rus: 'ru', chi: 'zh', zho: 'zh', dut: 'nl', nld: 'nl', swe: 'sv', dan: 'da', nor: 'no', fin: 'fi',
-  pol: 'pl', cze: 'cs', gre: 'el', tur: 'tr', ara: 'ar', heb: 'he', kor: 'ko', hin: 'hi', lat: 'la', cat: 'ca',
+  eng: 'en', por: 'pt', spa: 'es', cat: 'ca', glg: 'gl', baq: 'eu', eus: 'eu', oci: 'oc', fre: 'fr', fra: 'fr', ita: 'it',
+  cos: 'co', srd: 'sc', roh: 'rm', rum: 'ro', ron: 'ro', lat: 'la', ger: 'de', deu: 'de', dut: 'nl', nld: 'nl', fry: 'fy',
+  ltz: 'lb', dan: 'da', swe: 'sv', nor: 'no', nob: 'nb', nno: 'nn', ice: 'is', isl: 'is', fao: 'fo', yid: 'yi',
+  gle: 'ga', gla: 'gd', wel: 'cy', cym: 'cy', bre: 'br', cor: 'kw', glv: 'gv', pol: 'pl', cze: 'cs', ces: 'cs',
+  slo: 'sk', slk: 'sk', slv: 'sl', hrv: 'hr', bos: 'bs', srp: 'sr', mac: 'mk', mkd: 'mk', bul: 'bg', rus: 'ru',
+  ukr: 'uk', bel: 'be', lit: 'lt', lav: 'lv', est: 'et', fin: 'fi', sme: 'se', hun: 'hu', gre: 'el', ell: 'el',
+  alb: 'sq', sqi: 'sq', mlt: 'mt', tur: 'tr', geo: 'ka', kat: 'ka', arm: 'hy', hye: 'hy', aze: 'az', tat: 'tt',
+  chv: 'cv', epo: 'eo', jpn: 'ja', chi: 'zh', zho: 'zh', kor: 'ko', ara: 'ar', heb: 'he', hin: 'hi', per: 'fa', fas: 'fa',
 }
 
 export function normalizeLanguage(code?: string | null): string | null {
@@ -17,17 +39,20 @@ export function normalizeLanguage(code?: string | null): string | null {
   return c.split(/[-_]/)[0] || null
 }
 
+let englishNames: Intl.DisplayNames | undefined
+
 export function languageName(code?: string | null): string {
   if (!code) return ''
   try {
-    return new Intl.DisplayNames(['en'], { type: 'language' }).of(code) ?? code
+    englishNames ??= new Intl.DisplayNames(['en'], { type: 'language' })
+    return englishNames.of(code) ?? code
   } catch {
     return code
   }
 }
 
-/** Languages offered first when choosing one. */
-export const LANGUAGE_CHOICES = ['en', 'pt', 'es', 'fr', 'de', 'it', 'ja', 'zh', 'ru', 'nl']
+/** The languages in use on some books. */
+export const usedLanguages = (books: { language?: string | null }[]) => [...new Set(books.map((b) => b.language).filter((l): l is string => !!l))]
 
 export function cleanIsbn(s?: string | null): string | null {
   if (!s) return null
@@ -161,24 +186,56 @@ export async function searchBooks(q: LookupQuery, max = 10): Promise<BookMetadat
   return merged.slice(0, max)
 }
 
-const COMMON = ['en', 'pt', 'es', 'fr', 'de', 'it', 'ja', 'zh', 'ru', 'nl', 'sv', 'pl', 'ko', 'ar', 'he', 'el', 'tr', 'ca', 'la']
+// What each language calls itself, as a CSV might write it ("Català", "Euskara"); not every browser knows these.
+const AUTONYMS: Record<string, string> = {
+  pt: 'português', mwl: 'mirandés', gl: 'galego', es: 'español|castellano', ast: 'asturianu', an: 'aragonés', ca: 'català|valencià',
+  oc: 'occitan', fr: 'français', wa: 'walon', it: 'italiano', co: 'corsu', sc: 'sardu', fur: 'furlan', vec: 'vèneto', scn: 'sicilianu',
+  rm: 'rumantsch', ro: 'română', lad: 'ladino|judeo-espanyol', la: 'latina', en: 'english', sco: 'scots', de: 'deutsch',
+  gsw: 'schwiizertüütsch|alemannisch', nds: 'plattdüütsch', lb: 'lëtzebuergesch', nl: 'nederlands', li: 'limburgs', fy: 'frysk',
+  da: 'dansk', sv: 'svenska', no: 'norsk', nb: 'norsk bokmål|bokmål', nn: 'norsk nynorsk|nynorsk', is: 'íslenska', fo: 'føroyskt',
+  yi: 'ייִדיש', ga: 'gaeilge', gd: 'gàidhlig', gv: 'gaelg', cy: 'cymraeg', kw: 'kernewek', br: 'brezhoneg', pl: 'polski',
+  csb: 'kaszëbsczi', szl: 'ślōnski', cs: 'čeština', sk: 'slovenčina', hsb: 'hornjoserbšćina', dsb: 'dolnoserbšćina', sl: 'slovenščina',
+  hr: 'hrvatski', bs: 'bosanski', sr: 'српски|srpski', cnr: 'crnogorski', mk: 'македонски', bg: 'български', ru: 'русский',
+  uk: 'українська', be: 'беларуская', rue: 'русиньскый', lt: 'lietuvių', lv: 'latviešu', et: 'eesti', fi: 'suomi',
+  se: 'davvisámegiella', smn: 'anarâškielâ', sms: 'sääʹmǩiõll', hu: 'magyar', el: 'ελληνικά', sq: 'shqip', mt: 'malti', eu: 'euskara',
+  tr: 'türkçe', ka: 'ქართული', hy: 'հայերեն', az: 'azərbaycan', tt: 'татар', cv: 'чӑвашла', rom: 'romani', eo: 'esperanto',
+}
 
-/** Turns "English", "Português", "pt-BR" or "eng" into an ISO 639-1 code. */
+// Lowercase letters of any script, without accents: "Català" → "catala", "Русский" → "русскии".
+const flat = (s: string) => s.toLowerCase().normalize('NFD').replace(/[^\p{L}]/gu, '')
+let byName: Map<string, string> | undefined
+
+/** Each language under its name in English, Portuguese, Spanish, French, German and Italian, and in itself. */
+function languageNames() {
+  if (byName) return byName
+  const names = new Map<string, string>()
+  const add = (name: string | undefined, code: string) => {
+    const k = name && flat(name)
+    if (k && !names.has(k)) names.set(k, code)
+  }
+  for (const display of ['en', 'pt', 'es', 'fr', 'de', 'it']) {
+    try {
+      const of = new Intl.DisplayNames([display], { type: 'language' })
+      for (const c of LANGUAGES) add(of.of(c), c)
+    } catch {
+      /* no names in that language */
+    }
+  }
+  for (const [c, own] of Object.entries(AUTONYMS)) for (const name of own.split('|')) add(name, c)
+  for (const c of LANGUAGES) {
+    try {
+      add(new Intl.DisplayNames([c], { type: 'language' }).of(c), c)
+    } catch {
+      /* no name for itself */
+    }
+  }
+  return (byName = names)
+}
+
+/** Turns "English", "Português", "Català", "pt-BR" or "cat" into a language code. */
 export function languageCode(input?: string | null): string | null {
   const s = input?.trim()
   if (!s) return null
   if (/^[a-z]{2,3}([-_][a-z]{2})?$/i.test(s)) return normalizeLanguage(s)
-  const k = s.toLowerCase().normalize('NFD').replace(/[^a-z]/g, '')
-  for (const display of ['en', 'pt', 'es', 'fr', 'de']) {
-    let names: Intl.DisplayNames
-    try {
-      names = new Intl.DisplayNames([display], { type: 'language' })
-    } catch {
-      continue
-    }
-    for (const c of COMMON) {
-      if ((names.of(c) ?? '').toLowerCase().normalize('NFD').replace(/[^a-z]/g, '') === k) return c
-    }
-  }
-  return null
+  return languageNames().get(flat(s)) ?? null
 }

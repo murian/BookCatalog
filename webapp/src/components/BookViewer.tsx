@@ -31,6 +31,7 @@ export function BookViewer({
   book,
   origin,
   usedCategories,
+  usedLanguages,
   onClose,
   onSave,
   onDelete,
@@ -39,6 +40,7 @@ export function BookViewer({
   /** The cover that was clicked. */
   origin?: HTMLElement | null
   usedCategories: string[]
+  usedLanguages: string[]
   onClose: () => void
   onSave: (b: Book) => Promise<void>
   onDelete: (b: Book) => Promise<void>
@@ -239,6 +241,7 @@ export function BookViewer({
                   value={draft as PersonalFields & Book}
                   onChange={(p) => setDraft({ ...draft, ...p })}
                   usedCategories={usedCategories}
+                  usedLanguages={usedLanguages}
                   categoryHint={
                     <SuggestionHint
                       suggestion={draft.category ? null : strong}
