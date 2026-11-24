@@ -1,4 +1,4 @@
-import { BookOpen, Calendar, Check, ImagePlus, Loader2, Pencil, RotateCcw, ShoppingBag, Star, Timer, Trash2, X } from 'lucide-react'
+import { BookOpen, Calendar, Check, ClipboardCheck, ImagePlus, Loader2, Pencil, RotateCcw, ShoppingBag, Star, Timer, Trash2, X } from 'lucide-react'
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import type { Book, PersonalFields } from '../types'
@@ -209,7 +209,14 @@ export function BookViewer({
             ) : (
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <StatusBadge status={book.status} />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <StatusBadge status={book.status} />
+                    {book.reviewed && (
+                      <span className="flex items-center gap-1 text-xs font-semibold text-brand-700 dark:text-brand-300">
+                        <Check size={13} strokeWidth={3} /> Reviewed
+                      </span>
+                    )}
+                  </div>
                   <h2 className="font-display mt-3 text-3xl leading-tight font-semibold break-words">{book.title}</h2>
                   {book.author && <p className="mt-1 text-zinc-500">{book.author}</p>}
                   {book.rating ? (
@@ -257,6 +264,21 @@ export function BookViewer({
               </div>
             ) : (
               <>
+                {!book.reviewed && (
+                  <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-amber-500/60 bg-amber-500/[0.06] px-4 py-3">
+                    <ClipboardCheck size={18} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                    <p className="min-w-0 flex-1 text-sm text-zinc-600 dark:text-zinc-300">
+                      <b className="font-semibold text-amber-700 dark:text-amber-300">Needs review.</b> Check its details and cover.
+                    </p>
+                    <button
+                      className="btn-primary shrink-0 px-3 py-1.5"
+                      onClick={() => onSave(withSubjects({ ...book, reviewed: true, dateModified: new Date().toISOString() }))}
+                    >
+                      <Check size={15} /> Mark as reviewed
+                    </button>
+                  </div>
+                )}
+
                 <div className="mt-6 grid grid-cols-2 gap-2">
                   {facts.map(([Icon, label, value]) => (
                     <div key={label} className="rounded-2xl bg-zinc-900/[0.03] p-3 dark:bg-white/5">

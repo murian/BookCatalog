@@ -36,6 +36,8 @@ export interface Book {
   dateAdded: string
   dateModified?: string | null
   rating?: number | null
+  /** Whether the reader has checked this book's details. Books start unreviewed until they mark them. */
+  reviewed?: boolean | null
   notes?: string | null
   format?: BookFormat | null
 }
@@ -50,5 +52,5 @@ export type BookSource = 'Google Books' | 'Open Library' | 'Apple Books' | 'Wiki
 
 export type PersonalFields = Pick<
   Book,
-  'purchaseDate' | 'purchaseDateUnknown' | 'startReadingDate' | 'finishReadingDate' | 'status' | 'rating' | 'notes' | 'format' | 'language' | 'category'
+  'purchaseDate' | 'purchaseDateUnknown' | 'startReadingDate' | 'finishReadingDate' | 'status' | 'rating' | 'notes' | 'format' | 'language' | 'category' | 'reviewed'
 >

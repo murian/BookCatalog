@@ -17,7 +17,7 @@ import { CategorySelect } from './components/CategorySelect'
 import { OrganizeDialog } from './components/OrganizeDialog'
 import { SettingsDialog } from './components/SettingsDialog'
 import { SignInDialog } from './components/SignInDialog'
-import { StatusBadge } from './components/StatusBadge'
+import { ReviewBadge, StatusBadge } from './components/StatusBadge'
 
 type Filter = 'all' | ReadingStatus
 type AddTab = 'search' | 'photo' | 'csv'
@@ -49,6 +49,7 @@ export default function App() {
   const [sort, setSort] = useState<SortKey>('added')
   const [lang, setLang] = useState('')
   const [cat, setCat] = useState('')
+  const [review, setReview] = useState<'' | 'todo' | 'done'>('')
   const [view, setView] = useState<'grid' | 'list'>('grid')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   // The cover that was clicked, for the opened book to fly out of.
@@ -132,6 +133,7 @@ export default function App() {
   const catFilter = cat === NONE || used.includes(cat) ? cat : ''
   const reading = all.filter((b) => b.status === 'reading')
   const recent = useMemo(() => lastImport(all), [all])
+  const toReview = useMemo(() => all.filter((b) => !b.reviewed).length, [all])
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return all.filter(
@@ -139,9 +141,10 @@ export default function App() {
         (filter === 'all' || b.status === filter) &&
         (!langFilter || (langFilter === NONE ? !b.language : b.language === langFilter)) &&
         (!catFilter || (catFilter === NONE ? !b.category?.trim() : b.category?.trim() === catFilter)) &&
+        (!review || (review === 'todo' ? !b.reviewed : !!b.reviewed)) &&
         (!q || [b.title, b.author, b.isbn, b.publisher, b.notes, b.category, ...(b.categories ?? [])].some((v) => v?.toLowerCase().includes(q))),
     )
-  }, [all, filter, langFilter, catFilter, query])
+  }, [all, filter, langFilter, catFilter, review, query])
   const grouped = sort === 'category'
   const sections: Section[] = useMemo(
     () => (grouped ? groupByCategory(filtered) : [{ name: null, books: sortBooks(filtered, sort) }]),
@@ -389,6 +392,13 @@ export default function App() {
                 <option value={NONE}>No language</option>
               </select>
             )}
+            {all.length > 0 && (
+              <select className={FILTER} value={review} onChange={(e) => setReview(e.target.value as typeof review)} aria-label="Review">
+                <option value="">Reviewed or not</option>
+                <option value="todo">Needs review ({toReview})</option>
+                <option value="done">Reviewed ({all.length - toReview})</option>
+              </select>
+            )}
             <select className={FILTER} value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="Sort">
               <option value="added">Date added</option>
               <option value="title">Title</option>
@@ -470,14 +480,15 @@ export default function App() {
                         </div>
                         <p className="mt-3 line-clamp-2 text-sm leading-snug font-medium">{b.title}</p>
                         <p className="truncate text-xs text-zinc-500">{b.author}</p>
-                        {(b.status !== 'toRead' || b.rating) && (
-                          <p className="mt-1.5 flex items-center gap-2 text-xs">
+                        {(b.status !== 'toRead' || b.rating || !b.reviewed) && (
+                          <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs">
                             {b.status !== 'toRead' && <StatusBadge status={b.status} />}
                             {b.rating ? (
                               <span className="flex items-center gap-0.5 text-brass-500">
                                 <Star size={11} className="fill-current" /> {b.rating}
                               </span>
                             ) : null}
+                            {!b.reviewed && <ReviewBadge />}
                           </p>
                         )}
                       </button>
@@ -528,9 +539,12 @@ export default function App() {
                               <div className="min-w-0">
                                 <p className="line-clamp-1 font-medium">{b.title}</p>
                                 <p className="truncate text-xs text-zinc-500">{b.author}</p>
-                                <div className="mt-1 flex items-center gap-2 md:hidden">
-                                  <StatusBadge status={b.status} />
-                                  {b.category && !grouped && <span className="truncate text-xs text-zinc-500">{b.category}</span>}
+                                <div className="mt-1 flex flex-wrap items-center gap-2">
+                                  <span className="md:hidden">
+                                    <StatusBadge status={b.status} />
+                                  </span>
+                                  {!b.reviewed && <ReviewBadge />}
+                                  {b.category && !grouped && <span className="truncate text-xs text-zinc-500 md:hidden">{b.category}</span>}
                                 </div>
                               </div>
                             </div>
@@ -586,7 +600,7 @@ export default function App() {
             <button className="btn-primary ml-auto px-4 py-1.5 sm:order-last sm:ml-0" onClick={stopSelecting}>
               Done
             </button>
-            <div className="grid w-full grid-cols-3 gap-2 sm:ml-auto sm:flex sm:w-auto">
+            <div className="grid w-full grid-cols-2 gap-2 sm:ml-auto sm:flex sm:w-auto">
               <CategorySelect
                 placeholder="Category…"
                 label="Set category"
@@ -637,6 +651,22 @@ export default function App() {
                     {STATUS_LABEL[st]}
                   </option>
                 ))}
+              </select>
+              <select
+                className="field min-w-0 px-2.5 py-2 sm:w-40 sm:px-3.5"
+                aria-label="Set review"
+                value=""
+                disabled={!picked.size}
+                onChange={(e) => {
+                  const reviewed = e.target.value === 'done'
+                  bulk({ reviewed }, (n) => (reviewed ? `Marked ${n} as reviewed` : `Marked ${n} as needing review`))
+                }}
+              >
+                <option value="" disabled hidden>
+                  Review…
+                </option>
+                <option value="done">Reviewed</option>
+                <option value="todo">Needs review</option>
               </select>
             </div>
           </div>

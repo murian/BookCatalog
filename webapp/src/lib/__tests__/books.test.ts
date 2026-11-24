@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addedWhen, lastImport } from '../books'
+import { addedWhen, lastImport, makeBook } from '../books'
 import type { Book } from '../../types'
 
 const book = (id: string, dateAdded: string): Book => ({ id, userId: 'u', title: id, status: 'toRead', dateAdded })
@@ -28,6 +28,13 @@ describe('lastImport', () => {
   it('ignores books without a usable date', () => {
     expect(ids(lastImport([book('bad', 'not a date'), book('ok', '2026-11-22T18:00:00.000Z')]))).toEqual(['ok'])
     expect(lastImport([])).toEqual([])
+  })
+})
+
+describe('makeBook', () => {
+  it('files every new book as needing review, unless the reader ticked it', () => {
+    expect(makeBook({ title: 'Dune' }, {}, 'u').reviewed).toBe(false)
+    expect(makeBook({ title: 'Dune' }, { reviewed: true }, 'u').reviewed).toBe(true)
   })
 })
 
