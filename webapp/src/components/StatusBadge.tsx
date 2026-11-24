@@ -8,6 +8,13 @@ export const STATUS_STYLE: Record<ReadingStatus, string> = {
   abandoned: 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-400',
 }
 
+/** For books whose details the reader hasn't checked yet: dashed, like a draft. */
+export function ReviewBadge() {
+  return (
+    <span className="rounded-full border border-dashed border-amber-500/70 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:text-amber-300">Needs review</span>
+  )
+}
+
 export function StatusBadge({ status }: { status: ReadingStatus }) {
   return <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[status] ?? STATUS_STYLE.toRead}`}>{STATUS_LABEL[status] ?? status}</span>
 }

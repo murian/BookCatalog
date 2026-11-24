@@ -70,6 +70,13 @@ describe('parseCsvText', () => {
     expect(goodreads[0].category).toBeUndefined()
   })
 
+  it('reads whether a book was reviewed, in English or Portuguese', () => {
+    const rows = parseCsvText('Título;Revisado\nDom Casmurro;sim\nVidas Secas;não\nA Hora da Estrela;')
+    expect(rows.map((r) => r.reviewed)).toEqual([true, false, undefined])
+    expect(parseCsvText('title,reviewed\nDune,yes')[0].reviewed).toBe(true)
+    expect(parseCsvText('title\nDune')[0].reviewed).toBeUndefined()
+  })
+
   it('handles Goodreads exports', () => {
     const csv = 'Book Id,Title,Author,ISBN,ISBN13,My Rating,Date Read,Exclusive Shelf,Binding\n1,Dune,Frank Herbert,"=""0441013597""","=""9780441013593""",4,2022/08/01,read,Paperback'
     expect(parseCsvText(csv)[0]).toMatchObject({ title: 'Dune', isbn: '0441013597', rating: 4, finishReadingDate: '2022-08-01', status: 'finished', format: 'paperback' })

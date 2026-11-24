@@ -413,7 +413,7 @@ function CsvPanel({ userId, existing, onAdd, onDone }: { userId: string; existin
           <FileSpreadsheet size={32} className="text-brand-600 dark:text-brass-400" />
           <span className="font-medium">Choose a CSV file</span>
           <span className="max-w-md text-center text-sm text-zinc-500">
-            One title per line works. Optional columns: <code>author, isbn, language, category, bought, started, finished, status, rating, notes</code>. Goodreads exports work too.
+            One title per line works. Optional columns: <code>author, isbn, language, category, bought, started, finished, status, rating, notes, reviewed</code>. Goodreads exports work too.
           </span>
         </button>
         <input ref={fileRef} type="file" accept=".csv,text/csv,text/plain" hidden onChange={(e) => load(e.target.files?.[0])} />
@@ -452,6 +452,7 @@ function CsvPanel({ userId, existing, onAdd, onDone }: { userId: string; existin
             format: row.format ?? null,
             language: row.language || null,
             category: row.category || null,
+            reviewed: row.reviewed ?? false,
           },
           userId,
         )

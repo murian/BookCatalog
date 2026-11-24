@@ -138,6 +138,14 @@ export function PersonalForm({
         <span className="label">Notes</span>
         <textarea className="field min-h-20 resize-y" value={value.notes ?? ''} onChange={(e) => set('notes', e.target.value)} placeholder="Where you got it, who lent it, thoughts…" />
       </label>
+
+      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-dashed border-zinc-900/15 p-3 dark:border-white/15">
+        <input type="checkbox" className="mt-0.5 size-4 shrink-0 accent-brand-700" checked={!!value.reviewed} onChange={(e) => set('reviewed', e.target.checked)} />
+        <span className="text-sm">
+          <span className="font-medium">Reviewed</span>
+          <span className="block text-xs text-zinc-500">Tick once you've checked this book's details and cover. Until then it shows as needing review.</span>
+        </span>
+      </label>
     </div>
   )
 }

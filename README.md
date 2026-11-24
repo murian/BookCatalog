@@ -14,6 +14,7 @@ A fast web app to catalog your books. It runs entirely in the browser and is hos
 - **Edit many books at once**: tap **Select**, pick books (or filter and **Select all**), then set their category, language or status. Use it to fix or remove wrong languages in one go.
 - **Language** is only ever what you set. It's never guessed, because online records often describe a different edition from yours.
 - **Import a CSV** with many titles. Each row is looked up online, and you can review and pick the right edition before adding. Duplicates are detected. Goodreads exports work, and so do Portuguese and Spanish column names.
+- **Review mark**: every book you add starts as **Needs review** until you mark it reviewed, from the book's view (**Mark as reviewed**), its edit form, or for many books at once with **Select**. Filter the library by **Needs review** to work through them.
 - **Recently added** shows your last import: the book you just added, or the whole list from a CSV, in file order. **Select these** picks them all, to set their category, language or status in one go.
 - **Open a book** and it pops out of the grid as a 3D book, as thick as its page count, with its details beside it. Turn it over to read the blurb on the back, or point at it to tilt it.
 - **Your reading data**: category, bought on (or "I don't remember"), language, format, started, finished, status (to read, reading, finished, abandoned), rating, and notes.
@@ -31,7 +32,7 @@ The Hobbit,J.R.R. Tolkien,,en,Science fiction & fantasy,2021-03-14,2021-04-01,20
 Dom Casmurro,Machado de Assis,,Portuguese,Brazilian literature,unknown,,,to read,,
 ```
 
-A plain list with one title per line (optionally `title,author`) also works. Dates can be `YYYY-MM-DD`, `DD/MM/YYYY`, `YYYY-MM` or `YYYY`. Use `unknown` for a purchase date you don't remember. The category column may also be called `genre` or `categoria`, and can hold your own category names.
+A plain list with one title per line (optionally `title,author`) also works. Dates can be `YYYY-MM-DD`, `DD/MM/YYYY`, `YYYY-MM` or `YYYY`. Use `unknown` for a purchase date you don't remember. The category column may also be called `genre` or `categoria`, and can hold your own category names. A `reviewed` column (`yes`/`no`, or `sim`/`não`) marks books as already reviewed; without it, imported books need review.
 
 ## Development
 

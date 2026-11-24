@@ -13,6 +13,8 @@ export function makeBook(meta: Partial<BookMetadata>, personal: Partial<Personal
     // Only what the reader chose: the online sources describe some edition, not necessarily theirs.
     language: personal.language || null,
     category: personal.category?.trim() || null,
+    // Every new book needs reviewing, unless the reader says otherwise while adding it.
+    reviewed: !!personal.reviewed,
     title: meta.title?.trim() || 'Untitled',
     status: personal.status ?? 'toRead',
     id: newId(),
@@ -32,6 +34,7 @@ export const defaultPersonal = (): PersonalFields => ({
   format: '',
   language: null,
   category: null,
+  reviewed: false,
 })
 
 export type SortKey = 'added' | 'title' | 'author' | 'category' | 'finished' | 'bought'
@@ -127,6 +130,7 @@ export function exportCsv(books: Book[]) {
     isbn: b.isbn ?? '',
     language: languageName(b.language),
     category: b.category ?? '',
+    reviewed: b.reviewed ? 'yes' : 'no',
     publisher: b.publisher ?? '',
     published: b.publishedDate ?? '',
     pages: b.pageCount ?? '',

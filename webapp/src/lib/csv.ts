@@ -9,6 +9,7 @@ export interface CsvRow {
   isbn?: string
   language?: string
   category?: string
+  reviewed?: boolean
   purchaseDate?: string | null
   purchaseDateUnknown?: boolean
   startReadingDate?: string | null
@@ -19,7 +20,7 @@ export interface CsvRow {
   format?: BookFormat
 }
 
-type Field = 'title' | 'author' | 'isbn' | 'language' | 'category' | 'bought' | 'started' | 'finished' | 'status' | 'rating' | 'notes' | 'format'
+type Field = 'title' | 'author' | 'isbn' | 'language' | 'category' | 'reviewed' | 'bought' | 'started' | 'finished' | 'status' | 'rating' | 'notes' | 'format'
 
 // Header aliases (English, Portuguese, Spanish). Compared after lowercasing and stripping accents/punctuation.
 const ALIASES: Record<Field, string[]> = {
@@ -29,6 +30,7 @@ const ALIASES: Record<Field, string[]> = {
   language: ['language', 'lang', 'idioma', 'lingua'],
   // Not "shelf"/"estante": Goodreads and Skoob use those for the reading status.
   category: ['category', 'categoria', 'genre', 'genero', 'section', 'secao', 'seccion'],
+  reviewed: ['reviewed', 'revised', 'checked', 'revisado', 'revisada', 'revisto', 'conferido'],
   bought: ['bought', 'purchased', 'purchasedate', 'datebought', 'boughton', 'dateacquired', 'acquired', 'comprado', 'datacompra', 'datadecompra', 'compra', 'fechacompra'],
   started: ['started', 'start', 'startdate', 'startreading', 'startreadingdate', 'datestarted', 'inicio', 'comecei', 'datainicio', 'iniciado'],
   finished: ['finished', 'end', 'ended', 'enddate', 'finishdate', 'finishreadingdate', 'dateread', 'datefinished', 'fim', 'terminei', 'datafim', 'terminado', 'lido'],
@@ -52,6 +54,7 @@ function detectColumns(header: string[]): Partial<Record<Field, number>> {
 }
 
 const UNKNOWN = ['unknown', '?', 'idk', 'naosei', 'desconhecido', 'nose', 'desconocido']
+const YES = ['yes', 'y', 'true', '1', 'x', 'ok', 'done', 'sim', 's', 'si', 'reviewed', 'revised', 'revisado', 'revisada', 'revisto']
 
 /** Parses YYYY-MM-DD, YYYY-MM, YYYY, YYYY/MM/DD and DD/MM/YYYY (or MM/DD/YYYY when unambiguous). */
 export function parseDate(raw?: string): string | null | 'unknown' {
@@ -125,6 +128,7 @@ export function parseCsvText(text: string): CsvRow[] {
         isbn: cleanIsbn(get(r, 'isbn')) ?? undefined,
         language: languageCode(get(r, 'language')) ?? undefined,
         category: get(r, 'category'),
+        reviewed: get(r, 'reviewed') ? YES.includes(key(get(r, 'reviewed')!)) : undefined,
         purchaseDate: bought === 'unknown' ? null : bought,
         purchaseDateUnknown: bought === 'unknown',
         startReadingDate: startDate,
